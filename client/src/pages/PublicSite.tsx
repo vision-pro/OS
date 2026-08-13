@@ -76,6 +76,9 @@ const labels = {
     menu: "القائمة",
     placeholderProject: "مثال: إعلان، فعالية، هوية بصرية",
     allRights: "جميع الحقوق محفوظة",
+    latestVideos: "أحدث فيديوهاتنا",
+    latestVideosText: "فيديوهات مختارة من الحساب الرسمي، تُعرض هنا بعد اعتمادها من الفريق.",
+    watchOnInstagram: "شاهد على Instagram",
   },
   en: {
     work: "Portfolio",
@@ -125,6 +128,9 @@ const labels = {
     menu: "Menu",
     placeholderProject: "For example: campaign, event, visual identity",
     allRights: "All rights reserved",
+    latestVideos: "Latest Videos",
+    latestVideosText: "Selected videos from the official account, published here after team approval.",
+    watchOnInstagram: "Watch on Instagram",
   },
 };
 
@@ -268,6 +274,7 @@ export default function PublicSite({ slug }: SitePageProps) {
           <section className="section section-white"><div className="container"><SectionTitle kicker="01 — SERVICES" title={copy.services} text={copy.servicesText} /><div className="service-grid">{data.services.map(service => <article key={service.id} className="service-card"><div className="service-icon"><ServiceIcon name={service.icon} /></div><span className="card-index">0{service.sortOrder}</span><h3>{tField(service, "title", locale)}</h3><p>{tField(service, "summary", locale)}</p><Link href="/services" className="card-link">{copy.more}<ArrowUpLeft className="h-4 w-4" /></Link></article>)}</div></div></section>
           <section className="section section-ink"><div className="container about-grid"><div><p className="kicker kicker-light">{copy.aboutKicker}</p><h2 className="light-heading">{copy.aboutTitle}</h2></div><div className="about-copy"><p>{copy.aboutText}</p><div className="method-list"><span><b>01</b>{isAr ? "نبدأ بالاستماع" : "We begin by listening"}</span><span><b>02</b>{isAr ? "نرسم الاتجاه" : "We shape the direction"}</span><span><b>03</b>{isAr ? "ننتج بثقة" : "We produce with confidence"}</span></div><Link href="/about" className="text-link light">{copy.more}{arrow}</Link></div></div></section>
           <PortfolioSection data={data} locale={locale} copy={copy} activeCategory={activeCategory} setActiveCategory={setActiveCategory} projects={filteredProjects} />
+          <InstagramVideoSection videos={data.instagramVideos} locale={locale} copy={copy} />
           <BookingSection locale={locale} copy={copy} services={data.services} onSubmit={handleBooking} isPending={booking.isPending} />
         </>
       ) : (
@@ -275,7 +282,7 @@ export default function PublicSite({ slug }: SitePageProps) {
           <section className="inner-hero"><div className="container"><p className="kicker">VISION PRODUCTION</p><h1>{heroTitle}</h1><p>{heroText}</p></div></section>
           {slug === "about" ? <AboutSection locale={locale} copy={copy} /> : null}
           {slug === "services" ? <ServicesSection data={data} locale={locale} copy={copy} /> : null}
-          {slug === "portfolio" ? <PortfolioSection data={data} locale={locale} copy={copy} activeCategory={activeCategory} setActiveCategory={setActiveCategory} projects={filteredProjects} standalone /> : null}
+          {slug === "portfolio" ? <><PortfolioSection data={data} locale={locale} copy={copy} activeCategory={activeCategory} setActiveCategory={setActiveCategory} projects={filteredProjects} standalone /><InstagramVideoSection videos={data.instagramVideos} locale={locale} copy={copy} /></> : null}
           {slug === "achievements" ? <AchievementSection data={data} locale={locale} copy={copy} /> : null}
           {slug === "clients" ? <ClientSection data={data} locale={locale} copy={copy} /> : null}
           {slug === "contact" ? <ContactPage locale={locale} copy={copy} services={data.services} onBooking={handleBooking} onContact={handleContact} bookingPending={booking.isPending} contactPending={contact.isPending} /> : null}
@@ -289,6 +296,11 @@ export default function PublicSite({ slug }: SitePageProps) {
 
 function PortfolioSection({ data, locale, copy, activeCategory, setActiveCategory, projects, standalone = false }: any) {
   return <section className={`section ${standalone ? "section-white" : "section-muted"}`}><div className="container"><div className="section-row"><SectionTitle kicker="02 — PORTFOLIO" title={copy.featured} text={standalone ? undefined : (locale === "ar" ? "تفاصيل مرئية، أفكار واضحة، وتنفيذ لا يضيع في الزحام." : "Visual precision, clear ideas, and execution that does not disappear into the noise.")} /><Link href="/portfolio" className="text-link">{copy.work}{locale === "ar" ? <ArrowLeft className="h-4 w-4" /> : <ArrowRight className="h-4 w-4" />}</Link></div><div className="filter-row"><button className={activeCategory === "all" ? "active" : ""} onClick={() => setActiveCategory("all")}>{copy.all}</button>{data.categories.map((category: any) => <button key={category.id} className={activeCategory === String(category.id) ? "active" : ""} onClick={() => setActiveCategory(String(category.id))}>{tField(category, "title", locale)}</button>)}</div>{projects.length ? <div className="project-grid">{projects.map((project: any, index: number) => <article className="project-card" key={project.id}><div className="project-media">{project.media?.[0]?.url ? <img src={project.media[0].url} alt={tField(project.media[0], "alt", locale, tField(project, "title", locale))} /> : <><Film className="h-8 w-8" /><span>VISION / {String(index + 1).padStart(2, "0")}</span></>}<div className="project-overlay"><span>{tField(data.categories.find((c: any) => c.id === project.categoryId), "title", locale, "VISION")}</span></div></div><div className="project-meta"><div><h3>{tField(project, "title", locale)}</h3><p>{tField(project, "summary", locale)}</p></div><Link href={`/portfolio/${project.slug}`} className="round-link" aria-label={copy.explore}><ArrowUpLeft className="h-4 w-4" /></Link></div></article>)}</div> : <div className="empty-state"><Film className="h-7 w-7" /><h3>{copy.emptyWork}</h3><p>{copy.emptyWorkText}</p></div>}</div></section>;
+}
+
+function InstagramVideoSection({ videos, locale, copy }: any) {
+  if (!videos?.length) return null;
+  return <section id="instagram-videos" className="section section-ink"><div className="container"><SectionTitle kicker="INSTAGRAM / REELS" title={copy.latestVideos} text={copy.latestVideosText} /><div className="instagram-public-grid">{videos.map((video: any) => <article className="instagram-public-card" key={video.id}><iframe title={video.caption || "Instagram video"} src={`${String(video.permalink).replace(/\/$/, "")}/embed`} loading="lazy" allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share" /><div><p>{video.caption || (locale === "ar" ? "فيديو من الحساب الرسمي لرؤية للإنتاج الفني." : "A video from Ru'ya's official account.")}</p><a href={video.permalink} target="_blank" rel="noreferrer">{copy.watchOnInstagram}<ArrowUpLeft className="h-4 w-4" /></a></div></article>)}</div></div></section>;
 }
 
 function ServicesSection({ data, locale, copy }: any) { return <section className="section section-white"><div className="container"><SectionTitle kicker="SERVICES" title={copy.services} text={copy.servicesText} /><div className="services-list">{data.services.map((service: any, index: number) => <article className="service-row" key={service.id}><span>0{index + 1}</span><div className="service-icon"><ServiceIcon name={service.icon} /></div><div><h3>{tField(service, "title", locale)}</h3><p>{tField(service, "description", locale)}</p></div></article>)}</div></div></section>; }

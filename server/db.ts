@@ -6,6 +6,8 @@ import {
   clients,
   contactRequests,
   faqs,
+  instagramSyncConfigs,
+  instagramVideos,
   InsertUser,
   mediaAssets,
   pages,
@@ -286,7 +288,7 @@ export async function getPublicSiteData() {
   await ensureBrandContent();
   const db = await getDb();
   if (!db) return null;
-  const [pageRows, serviceRows, projectRows, categoryRows, achievementRows, clientRows, partnerRows, faqRows, settingsRows] = await Promise.all([
+  const [pageRows, serviceRows, projectRows, categoryRows, achievementRows, clientRows, partnerRows, faqRows, settingsRows, instagramVideoRows] = await Promise.all([
     db.select().from(pages).where(eq(pages.status, "published")).orderBy(asc(pages.navigationOrder)),
     db.select().from(services).where(eq(services.isActive, true)).orderBy(asc(services.sortOrder)),
     db.select().from(projects).where(eq(projects.status, "published")).orderBy(desc(projects.publishedAt)),
@@ -296,6 +298,7 @@ export async function getPublicSiteData() {
     db.select().from(partners).where(eq(partners.isActive, true)).orderBy(asc(partners.sortOrder)),
     db.select().from(faqs).where(eq(faqs.isPublished, true)).orderBy(asc(faqs.sortOrder)),
     db.select().from(siteSettings),
+    db.select().from(instagramVideos).where(eq(instagramVideos.status, "published")).orderBy(desc(instagramVideos.sourcePublishedAt)),
   ]);
   const mediaIds = [
     ...projectRows.flatMap(project => [project.coverMediaId, ...(project.mediaIds ?? [])]),
@@ -315,6 +318,7 @@ export async function getPublicSiteData() {
     clients: clientRows.map(item => ({ ...item, logo: selectMediaByIds(item.logoMediaId ? [item.logoMediaId] : [], media)[0] ?? null })),
     partners: partnerRows.map(item => ({ ...item, logo: selectMediaByIds(item.logoMediaId ? [item.logoMediaId] : [], media)[0] ?? null })),
     faqs: faqRows,
+    instagramVideos: instagramVideoRows,
     settings: settingsRows,
   };
 }
@@ -393,14 +397,15 @@ export async function deleteAdminEntity(entity: AdminEntity, id: number) {
 
 export async function getAdminOverview() {
   const db = await getDb();
-  if (!db) return { projects: 0, bookings: 0, contacts: 0, media: 0 };
-  const [projectRows, bookingRows, contactRows, mediaRows] = await Promise.all([
+  if (!db) return { projects: 0, bookings: 0, contacts: 0, media: 0, instagramVideos: 0 };
+  const [projectRows, bookingRows, contactRows, mediaRows, instagramVideoRows] = await Promise.all([
     db.select({ id: projects.id }).from(projects),
     db.select({ id: bookings.id }).from(bookings).where(eq(bookings.status, "new")),
     db.select({ id: contactRequests.id }).from(contactRequests).where(eq(contactRequests.status, "new")),
     db.select({ id: mediaAssets.id }).from(mediaAssets),
+    db.select({ id: instagramVideos.id }).from(instagramVideos),
   ]);
-  return { projects: projectRows.length, bookings: bookingRows.length, contacts: contactRows.length, media: mediaRows.length };
+  return { projects: projectRows.length, bookings: bookingRows.length, contacts: contactRows.length, media: mediaRows.length, instagramVideos: instagramVideoRows.length };
 }
 
 export async function listMedia() {
@@ -459,4 +464,129 @@ export async function saveSiteSetting(key: string, value: Record<string, unknown
     .insert(siteSettings)
     .values({ key, value, updatedById })
     .onDuplicateKeyUpdate({ set: { value, updatedById } });
+}
+
+const VISION_FACEBOOK_PAGE_ID = "830116313518371";
+
+type InstagramMediaResponse = {
+  data?: Array<{
+    id: string;
+    caption?: string;
+    media_type?: string;
+    media_product_type?: string;
+    permalink?: string;
+    shortcode?: string;
+    thumbnail_url?: string;
+    timestamp?: string;
+  }>;
+  error?: { message?: string };
+};
+
+async function instagramGraph<T>(path: string, params: Record<string, string>): Promise<T> {
+  if (!ENV.instagramGraphAccessToken) throw new Error("رمز Instagram Graph API غير مهيأ.");
+  const url = new URL(`https://graph.facebook.com/v23.0${path}`);
+  Object.entries(params).forEach(([key, value]) => url.searchParams.set(key, value));
+  url.searchParams.set("access_token", ENV.instagramGraphAccessToken);
+  const response = await fetch(url);
+  const body = await response.json() as T & { error?: { message?: string } };
+  if (!response.ok) throw new Error(body.error?.message || "تعذر الاتصال بـ Instagram Graph API.");
+  return body;
+}
+
+export async function getOrCreateInstagramSyncConfig() {
+  const db = await getDb();
+  if (!db) throw new Error("قاعدة البيانات غير متاحة حالياً");
+  const existing = await db.select().from(instagramSyncConfigs).where(eq(instagramSyncConfigs.facebookPageId, VISION_FACEBOOK_PAGE_ID)).limit(1);
+  if (existing[0]) return existing[0];
+  const result = await db.insert(instagramSyncConfigs).values({ facebookPageId: VISION_FACEBOOK_PAGE_ID });
+  const created = await db.select().from(instagramSyncConfigs).where(eq(instagramSyncConfigs.id, Number(result[0].insertId))).limit(1);
+  if (!created[0]) throw new Error("تعذر تهيئة إعدادات مزامنة Instagram.");
+  return created[0];
+}
+
+export async function getInstagramSyncConfigByTaskUid(taskUid: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const rows = await db.select().from(instagramSyncConfigs).where(eq(instagramSyncConfigs.scheduleCronTaskUid, taskUid)).limit(1);
+  return rows[0];
+}
+
+export async function listInstagramVideos() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(instagramVideos).orderBy(desc(instagramVideos.sourcePublishedAt));
+}
+
+export async function updateInstagramVideoStatus(id: number, status: "draft" | "published" | "archived", approvedById: number) {
+  const db = await getDb();
+  if (!db) throw new Error("قاعدة البيانات غير متاحة حالياً");
+  const publishFields = status === "published" ? { approvedById, approvedAt: new Date() } : { approvedById: null, approvedAt: null };
+  await db.update(instagramVideos).set({ status, ...publishFields }).where(eq(instagramVideos.id, id));
+}
+
+export async function updateInstagramSchedule(configId: number, values: { cronExpression?: string; scheduleCronTaskUid?: string | null; isScheduleEnabled?: boolean }) {
+  const db = await getDb();
+  if (!db) throw new Error("قاعدة البيانات غير متاحة حالياً");
+  await db.update(instagramSyncConfigs).set(values).where(eq(instagramSyncConfigs.id, configId));
+}
+
+export async function syncInstagramVideos(configId?: number) {
+  const db = await getDb();
+  if (!db) throw new Error("قاعدة البيانات غير متاحة حالياً");
+  const config = configId
+    ? (await db.select().from(instagramSyncConfigs).where(eq(instagramSyncConfigs.id, configId)).limit(1))[0]
+    : await getOrCreateInstagramSyncConfig();
+  if (!config) throw new Error("إعدادات مزامنة Instagram غير موجودة.");
+
+  try {
+    const page = await instagramGraph<{ instagram_business_account?: { id?: string; username?: string } }>(`/${config.facebookPageId}`, {
+      fields: "instagram_business_account{id,username}",
+    });
+    const account = page.instagram_business_account;
+    if (!account?.id) throw new Error("لا يوجد حساب Instagram مهني مرتبط بصفحة الشركة.");
+
+    const feed = await instagramGraph<InstagramMediaResponse>(`/${account.id}/media`, {
+      fields: "id,caption,media_type,media_product_type,permalink,shortcode,thumbnail_url,timestamp",
+      limit: "100",
+    });
+    const videos = (feed.data ?? []).filter(item => (item.media_type === "VIDEO" || item.media_product_type === "REELS") && item.permalink);
+    let imported = 0;
+    for (const item of videos) {
+      const sourcePublishedAt = item.timestamp ? new Date(item.timestamp) : null;
+      await db.insert(instagramVideos).values({
+        syncConfigId: config.id,
+        sourceMediaId: item.id,
+        shortcode: item.shortcode ?? null,
+        permalink: item.permalink!,
+        caption: item.caption ?? null,
+        thumbnailUrl: item.thumbnail_url ?? null,
+        mediaType: item.media_type ?? null,
+        mediaProductType: item.media_product_type ?? null,
+        sourcePublishedAt,
+      }).onDuplicateKeyUpdate({
+        set: {
+          permalink: item.permalink!,
+          caption: item.caption ?? null,
+          thumbnailUrl: item.thumbnail_url ?? null,
+          mediaType: item.media_type ?? null,
+          mediaProductType: item.media_product_type ?? null,
+          sourcePublishedAt,
+          lastSyncedAt: new Date(),
+        },
+      });
+      imported += 1;
+    }
+    await db.update(instagramSyncConfigs).set({
+      instagramAccountId: account.id,
+      instagramUsername: account.username ?? null,
+      lastSyncedAt: new Date(),
+      lastSyncStatus: "success",
+      lastSyncError: null,
+    }).where(eq(instagramSyncConfigs.id, config.id));
+    return { imported, instagramAccountId: account.id, instagramUsername: account.username ?? null };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    await db.update(instagramSyncConfigs).set({ lastSyncStatus: "error", lastSyncError: message }).where(eq(instagramSyncConfigs.id, config.id));
+    throw error;
+  }
 }

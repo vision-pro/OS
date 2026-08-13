@@ -272,6 +272,54 @@ export const contactRequests = mysqlTable(
   table => [index("contact_status_idx").on(table.status, table.createdAt)],
 );
 
+export const instagramSyncConfigs = mysqlTable(
+  "instagramSyncConfigs",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    facebookPageId: varchar("facebookPageId", { length: 64 }).notNull().unique(),
+    instagramAccountId: varchar("instagramAccountId", { length: 64 }),
+    instagramUsername: varchar("instagramUsername", { length: 120 }),
+    cronExpression: varchar("cronExpression", { length: 80 }).default("0 0 */6 * * *").notNull(),
+    scheduleCronTaskUid: varchar("scheduleCronTaskUid", { length: 65 }),
+    isScheduleEnabled: boolean("isScheduleEnabled").default(false).notNull(),
+    lastSyncedAt: timestamp("lastSyncedAt"),
+    lastSyncStatus: varchar("lastSyncStatus", { length: 30 }),
+    lastSyncError: text("lastSyncError"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => [index("instagram_sync_task_idx").on(table.scheduleCronTaskUid)],
+);
+
+export const instagramVideos = mysqlTable(
+  "instagramVideos",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    syncConfigId: int("syncConfigId").notNull(),
+    sourceMediaId: varchar("sourceMediaId", { length: 80 }).notNull().unique(),
+    shortcode: varchar("shortcode", { length: 120 }),
+    permalink: varchar("permalink", { length: 1024 }).notNull(),
+    caption: text("caption"),
+    thumbnailUrl: varchar("thumbnailUrl", { length: 1024 }),
+    mediaType: varchar("mediaType", { length: 80 }),
+    mediaProductType: varchar("mediaProductType", { length: 80 }),
+    status: mysqlEnum("status", ["draft", "published", "archived"]).default("draft").notNull(),
+    isFeatured: boolean("isFeatured").default(false).notNull(),
+    sortOrder: int("sortOrder").default(0).notNull(),
+    sourcePublishedAt: timestamp("sourcePublishedAt"),
+    approvedById: int("approvedById"),
+    approvedAt: timestamp("approvedAt"),
+    firstSyncedAt: timestamp("firstSyncedAt").defaultNow().notNull(),
+    lastSyncedAt: timestamp("lastSyncedAt").defaultNow().notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => [
+    index("instagram_video_config_status_idx").on(table.syncConfigId, table.status),
+    index("instagram_video_published_idx").on(table.status, table.sourcePublishedAt),
+  ],
+);
+
 export const siteSettings = mysqlTable(
   "siteSettings",
   {
