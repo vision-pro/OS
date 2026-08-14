@@ -16,5 +16,7 @@ describe("content publishing", () => {
     expect(isPubliclyPublished("projects", { status: "draft" })).toBe(false);
     expect(isPubliclyPublished("achievements", { isPublished: true })).toBe(true);
     expect(isPubliclyPublished("services", { isActive: false })).toBe(false);
+    expect(isPubliclyPublished("clients", { isActive: true })).toBe(true);
+    expect(isPubliclyPublished("clients", { isActive: false })).toBe(false);
   });
 });
