@@ -50,8 +50,8 @@
   width: 100%;
   height: 74px;
   object-fit: contain;
-  filter: grayscale(1);
-  opacity: .84;
+  filter: none;
+  opacity: 1;
   transition: filter .18s var(--ease), opacity .18s var(--ease);
 }
 
