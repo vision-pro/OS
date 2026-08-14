@@ -8,4 +8,5 @@ export const ENV = {
   forgeApiUrl: process.env.BUILT_IN_FORGE_API_URL ?? "",
   forgeApiKey: process.env.BUILT_IN_FORGE_API_KEY ?? "",
   instagramGraphAccessToken: process.env.INSTAGRAM_GRAPH_ACCESS_TOKEN ?? "",
+  adminEmails: process.env.ADMIN_EMAILS ?? "",
 };
