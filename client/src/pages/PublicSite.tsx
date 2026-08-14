@@ -21,6 +21,7 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { toast } from "sonner";
 import { onPublicContentUpdated } from "@/lib/publication";
+import "./client-logos.css";
 
 type Locale = "ar" | "en";
 type SitePageProps = { slug: string };
@@ -278,6 +279,7 @@ export default function PublicSite({ slug }: SitePageProps) {
           <section className="section section-white"><div className="container"><SectionTitle kicker="01 — SERVICES" title={copy.services} text={copy.servicesText} /><div className="service-grid">{data.services.map(service => <article key={service.id} className="service-card"><div className="service-icon"><ServiceIcon name={service.icon} /></div><span className="card-index">0{service.sortOrder}</span><h3>{tField(service, "title", locale)}</h3><p>{tField(service, "summary", locale)}</p><Link href="/services" className="card-link">{copy.more}<ArrowUpLeft className="h-4 w-4" /></Link></article>)}</div></div></section>
           <section className="section section-ink"><div className="container about-grid"><div><p className="kicker kicker-light">{copy.aboutKicker}</p><h2 className="light-heading">{copy.aboutTitle}</h2></div><div className="about-copy"><p>{copy.aboutText}</p><div className="method-list"><span><b>01</b>{isAr ? "نبدأ بالاستماع" : "We begin by listening"}</span><span><b>02</b>{isAr ? "نرسم الاتجاه" : "We shape the direction"}</span><span><b>03</b>{isAr ? "ننتج بثقة" : "We produce with confidence"}</span></div><Link href="/about" className="text-link light">{copy.more}{arrow}</Link></div></div></section>
           <PortfolioSection data={data} locale={locale} copy={copy} activeCategory={activeCategory} setActiveCategory={setActiveCategory} projects={filteredProjects} />
+          <ApprovedClientLogos clients={data.clients} locale={locale} />
           <InstagramVideoSection videos={data.instagramVideos} locale={locale} copy={copy} />
           <BookingSection locale={locale} copy={copy} services={data.services} onSubmit={handleBooking} isPending={booking.isPending} />
         </>
@@ -305,6 +307,14 @@ function PortfolioSection({ data, locale, copy, activeCategory, setActiveCategor
 function InstagramVideoSection({ videos, locale, copy }: any) {
   if (!videos?.length) return null;
   return <section id="instagram-videos" className="section section-ink"><div className="container"><SectionTitle kicker="INSTAGRAM / REELS" title={copy.latestVideos} text={copy.latestVideosText} /><div className="instagram-public-grid">{videos.map((video: any) => <article className="instagram-public-card" key={video.id}><iframe title={video.caption || "Instagram video"} src={`${String(video.permalink).replace(/\/$/, "")}/embed`} loading="lazy" allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share" /><div><p>{video.caption || (locale === "ar" ? "فيديو من الحساب الرسمي لرؤية للإنتاج الفني." : "A video from Ru'ya's official account.")}</p><a href={video.permalink} target="_blank" rel="noreferrer">{copy.watchOnInstagram}<ArrowUpLeft className="h-4 w-4" /></a></div></article>)}</div></div></section>;
+}
+
+function ApprovedClientLogos({ clients, locale }: { clients: any[]; locale: Locale }) {
+  const logos = clients.filter(client => client.logo?.url);
+  if (!logos.length) return null;
+  const title = locale === "ar" ? "شركاء وثقوا برؤيتنا" : "Trusted by Our Clients";
+  const text = locale === "ar" ? "شعارات العملاء المعتمدين فقط، مرتبة من لوحة الإدارة." : "Approved client marks, curated directly from the administration dashboard.";
+  return <section className="client-logo-section"><div className="container"><div className="client-logo-section-head"><div><p className="kicker">SELECTED CLIENTS</p><h2>{title}</h2></div><p>{text}</p></div><div className="client-logo-showcase">{logos.map(client => { const content = <img src={client.logo.url} alt={tField(client, "name", locale)} loading="lazy" />; return client.websiteUrl ? <a key={client.id} className="client-logo-showcase-item" href={client.websiteUrl} target="_blank" rel="noreferrer">{content}</a> : <div key={client.id} className="client-logo-showcase-item">{content}</div>; })}</div></div></section>;
 }
 
 function ServicesSection({ data, locale, copy }: any) { return <section className="section section-white"><div className="container"><SectionTitle kicker="SERVICES" title={copy.services} text={copy.servicesText} /><div className="services-list">{data.services.map((service: any, index: number) => <article className="service-row" key={service.id}><span>0{index + 1}</span><div className="service-icon"><ServiceIcon name={service.icon} /></div><div><h3>{tField(service, "title", locale)}</h3><p>{tField(service, "description", locale)}</p></div></article>)}</div></div></section>; }
