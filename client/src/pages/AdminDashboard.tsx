@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { trpc } from "@/lib/trpc";
 import { cn } from "@/lib/utils";
 import { notifyPublicContentUpdated } from "@/lib/publication";
+import { formatBytes, getUploadLimit, uploadMediaFile } from "@/lib/mediaUpload";
 import {
   BarChart3,
   CheckCircle2,
@@ -131,8 +132,21 @@ function MediaManager() {
   const { data = [], isLoading } = trpc.admin.media.list.useQuery();
   const utils = trpc.useUtils();
   const [uploading, setUploading] = useState(false);
-  async function upload(event: ChangeEvent<HTMLInputElement>) { const file = event.target.files?.[0]; if (!file) return; if (file.size > 45 * 1024 * 1024) { toast.error("الحد الأقصى للملف 45 ميغابايت."); return; } setUploading(true); try { const dataUrl = await toDataUrl(file); const response = await fetch("/api/media/upload", { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "include", body: JSON.stringify({ fileName: file.name, mimeType: file.type || "application/octet-stream", dataUrl }) }); if (!response.ok) throw new Error(); toast.success("تم رفع الملف إلى التخزين السحابي."); utils.admin.media.list.invalidate(); } catch { toast.error("تعذر رفع الملف. تأكد من تسجيل دخولك كمسؤول."); } finally { setUploading(false); event.target.value = ""; } }
-  return <section className="media-manager"><div className="entity-header"><div><p className="admin-eyebrow">S3 MEDIA LIBRARY</p><h2>مكتبة الوسائط</h2></div><label className="admin-primary upload-button"><Upload className="h-4 w-4" />{uploading ? "جارٍ الرفع…" : "رفع ملف"}<input type="file" accept="image/*,video/*,.pdf" onChange={upload} disabled={uploading} /></label></div><p className="admin-note">تُحفظ الملفات في Amazon S3 وتُحفظ في قاعدة البيانات روابطها وبياناتها فقط. استخدم رقم الوسائط كغلاف أو شعار داخل نماذج المحتوى.</p>{isLoading ? <div className="admin-loading compact"><Loader2 className="animate-spin" /></div> : <div className="media-grid">{(data as any[]).map(media => <article key={media.id} className="media-card">{media.kind === "image" ? <img src={media.url} alt={media.altAr || media.originalName} /> : <div className="media-file"><Images className="h-7 w-7" /><span>{media.kind.toUpperCase()}</span></div>}<div><b>#{media.id} — {media.originalName}</b><small>{Math.ceil(media.sizeBytes / 1024)} KB · {media.mimeType}</small></div></article>)}{data.length === 0 ? <div className="admin-empty">لا توجد وسائط مرفوعة بعد.</div> : null}</div>}</section>;
+  const [uploadProgress, setUploadProgress] = useState(0);
+  async function upload(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const limit = getUploadLimit(file);
+    if (file.size > limit) { toast.error(`حجم ${file.type.startsWith("video/") ? "الفيديو" : "الملف"} يتجاوز الحد المسموح: ${formatBytes(limit)}.`); return; }
+    setUploading(true); setUploadProgress(0);
+    try {
+      await uploadMediaFile(file, { onProgress: setUploadProgress });
+      toast.success("تم رفع الملف إلى التخزين السحابي.");
+      utils.admin.media.list.invalidate();
+    } catch (error) { toast.error(error instanceof Error ? error.message : "تعذر رفع الملف. تأكد من تسجيل دخولك كمسؤول."); }
+    finally { setUploading(false); setUploadProgress(0); event.target.value = ""; }
+  }
+  return <section className="media-manager"><div className="entity-header"><div><p className="admin-eyebrow">S3 MEDIA LIBRARY</p><h2>مكتبة الوسائط</h2></div><label className="admin-primary upload-button"><Upload className="h-4 w-4" />{uploading ? `جارٍ الرفع… ${uploadProgress}%` : "رفع ملف"}<input type="file" accept="image/*,video/*,.pdf" onChange={upload} disabled={uploading} /></label></div><p className="admin-note">ترفع الفيديوهات مباشرةً إلى التخزين دون تحويلها إلى Base64. حد الفيديو الواحد 500 ميجابايت، وحد الصور والمستندات 50 ميجابايت.</p>{uploading ? <div className="media-upload-progress" aria-live="polite"><div style={{ width: `${uploadProgress}%` }} /><span>{uploadProgress}% — لا تغلق الصفحة حتى يكتمل الرفع.</span></div> : null}{isLoading ? <div className="admin-loading compact"><Loader2 className="animate-spin" /></div> : <div className="media-grid">{(data as any[]).map(media => <article key={media.id} className="media-card">{media.kind === "image" ? <img src={media.url} alt={media.altAr || media.originalName} /> : <div className="media-file"><Images className="h-7 w-7" /><span>{media.kind.toUpperCase()}</span></div>}<div><b>#{media.id} — {media.originalName}</b><small>{Math.ceil(media.sizeBytes / 1024)} KB · {media.mimeType}</small></div></article>)}{data.length === 0 ? <div className="admin-empty">لا توجد وسائط مرفوعة بعد.</div> : null}</div>}</section>;
 }
 
 function ClientLogosManager() {

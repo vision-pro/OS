@@ -185,6 +185,10 @@ body:has(.admin-page) [data-sidebar="sidebar"] p {
 .admin-empty { display: grid; min-height: 13rem; place-items: center; padding: 1rem; color: #79847e; font-size: .85rem; text-align: center; }
 .admin-loading.compact { display: grid; min-height: 13rem; place-items: center; color: var(--admin-teal); }
 
+.media-upload-progress { position: relative; overflow: hidden; min-height: 42px; margin: 16px 0; border: 1px solid rgba(43,119,113,.24); color: #19554f; background: #eef7f6; font-size: .86rem; font-weight: 700; }
+.media-upload-progress > div { position: absolute; inset: 0 auto 0 0; background: rgba(43,119,113,.22); transition: width .18s var(--ease); }
+.media-upload-progress span { position: relative; z-index: 1; display: block; padding: 11px 14px; }
+
 .client-logo-manager { margin-top: 1.25rem; }
 .client-logo-header-actions { display: flex; align-items: center; gap: .65rem; }.client-logo-header-actions .admin-ghost { display: inline-flex; align-items: center; justify-content: center; gap: .4rem; cursor: pointer; font-size: .8rem; }
 .client-logo-intro { display: flex; align-items: center; justify-content: space-between; gap: 1.5rem; margin: 1rem 0; padding: 1rem 1.1rem; border: 1px solid #cce5df; border-radius: .75rem; background: #f2faf7; }
