@@ -234,11 +234,11 @@ export default function PublicSite({ slug }: SitePageProps) {
 
   function scrollToClientLogos() {
     window.history.replaceState(null, "", "#clients");
-    window.setTimeout(() => {
+    window.requestAnimationFrame(() => {
       const target = document.getElementById("clients");
       if (!target) return;
-      window.scrollTo({ top: Math.max(0, target.getBoundingClientRect().top + window.scrollY - 72), behavior: "instant" });
-    }, 0);
+      window.scrollTo({ top: Math.max(0, target.getBoundingClientRect().top + window.scrollY - 72), behavior: "auto" });
+    });
   }
 
   if (isLoading) {
