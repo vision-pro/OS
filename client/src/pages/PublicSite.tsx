@@ -235,7 +235,9 @@ export default function PublicSite({ slug }: SitePageProps) {
   function scrollToClientLogos() {
     window.history.replaceState(null, "", "#clients");
     window.setTimeout(() => {
-      document.getElementById("clients")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      const target = document.getElementById("clients");
+      if (!target) return;
+      window.scrollTo({ top: Math.max(0, target.getBoundingClientRect().top + window.scrollY - 72), behavior: "instant" });
     }, 0);
   }
 
