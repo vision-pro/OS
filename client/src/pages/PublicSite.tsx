@@ -243,7 +243,7 @@ export default function PublicSite({ slug }: SitePageProps) {
             <img src={logoUrl} alt="VISION Production" className="brand-logo" />
           </Link>
           <nav className="desktop-nav" aria-label={copy.menu}>
-            {navPages.map(page => <Link key={page.slug} href={`/${page.slug}`} className={slug === page.slug ? "active" : ""}>{tField(page, "title", locale)}</Link>)}
+            {navPages.map(page => page.slug === "clients" && slug === "home" ? <a key={page.slug} href="#clients">{tField(page, "title", locale)}</a> : <Link key={page.slug} href={`/${page.slug}`} className={slug === page.slug ? "active" : ""}>{tField(page, "title", locale)}</Link>)}
           </nav>
           <div className="nav-actions">
             <button className="language-button" onClick={() => setLocale(isAr ? "en" : "ar")} aria-label="Change language"><Globe2 className="h-4 w-4" />{isAr ? "EN" : "ع"}</button>
@@ -251,7 +251,7 @@ export default function PublicSite({ slug }: SitePageProps) {
             <button className="mobile-menu-button" onClick={() => setMenuOpen(!menuOpen)} aria-label={copy.menu}>{menuOpen ? <X /> : <Menu />}</button>
           </div>
         </div>
-        {menuOpen ? <div className="mobile-nav container">{navPages.map(page => <Link key={page.slug} href={`/${page.slug}`} onClick={() => setMenuOpen(false)}>{tField(page, "title", locale)}</Link>)}</div> : null}
+        {menuOpen ? <div className="mobile-nav container">{navPages.map(page => page.slug === "clients" && slug === "home" ? <a key={page.slug} href="#clients" onClick={() => setMenuOpen(false)}>{tField(page, "title", locale)}</a> : <Link key={page.slug} href={`/${page.slug}`} onClick={() => setMenuOpen(false)}>{tField(page, "title", locale)}</Link>)}</div> : null}
       </header>
 
       {slug === "home" ? (

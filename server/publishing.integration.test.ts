@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { services } from "../drizzle/schema";
+import { clients, services } from "../drizzle/schema";
 import { getDb, getPublicSiteData } from "./db";
 import type { TrpcContext } from "./_core/context";
 import { appRouter } from "./routers";
@@ -42,6 +42,27 @@ describe("admin publication flow", () => {
       expect(visibleData?.services.some(item => item.id === service.id)).toBe(true);
     } finally {
       await db.update(services).set({ isActive: service.isActive }).where(eq(services.id, service.id));
+    }
+  });
+
+  it("excludes an inactive client logo from public site data and restores the approved state", async () => {
+    const db = await getDb();
+    if (!db) throw new Error("Database is required for the client logo integration test");
+
+    const [client] = await db.select().from(clients).where(eq(clients.isActive, true)).limit(1);
+    if (!client) throw new Error("An active client is required for the client logo integration test");
+
+    const caller = appRouter.createCaller(adminContext());
+    try {
+      await caller.admin.content.setPublication({ entity: "clients", id: client.id, published: false });
+      const hiddenData = await getPublicSiteData();
+      expect(hiddenData?.clients.some(item => item.id === client.id)).toBe(false);
+
+      await caller.admin.content.setPublication({ entity: "clients", id: client.id, published: true });
+      const visibleData = await getPublicSiteData();
+      expect(visibleData?.clients.some(item => item.id === client.id)).toBe(true);
+    } finally {
+      await db.update(clients).set({ isActive: client.isActive }).where(eq(clients.id, client.id));
     }
   });
 });
