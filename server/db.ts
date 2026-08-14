@@ -29,6 +29,12 @@ export function isConfiguredAdminEmail(email?: string | null): boolean {
   return ENV.adminEmails.split(",").map(value => value.trim().toLowerCase()).filter(Boolean).includes(normalized);
 }
 
+export function resolveUserRole(user: Pick<InsertUser, "openId" | "email" | "role">): "admin" | "user" | undefined {
+  if (user.role !== undefined) return user.role;
+  if (user.openId === ENV.ownerOpenId || isConfiguredAdminEmail(user.email)) return "admin";
+  return user.email !== undefined ? "user" : undefined;
+}
+
 export async function getDb() {
   if (!_db && process.env.DATABASE_URL) {
     try {
@@ -54,8 +60,11 @@ export async function upsertUser(user: InsertUser): Promise<void> {
       updateSet[field] = user[field] ?? null;
     }
   }
-  values.role = user.role ?? (user.openId === ENV.ownerOpenId || isConfiguredAdminEmail(user.email) ? "admin" : "user");
-  updateSet.role = values.role;
+  const resolvedRole = resolveUserRole(user);
+  if (resolvedRole) {
+    values.role = resolvedRole;
+    updateSet.role = resolvedRole;
+  }
   await db.insert(users).values(values).onDuplicateKeyUpdate({ set: updateSet });
 }
 
