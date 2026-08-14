@@ -140,15 +140,30 @@ function ClientLogosManager() {
   const { data: clients = [], isLoading: clientsLoading } = trpc.admin.content.list.useQuery("clients");
   const { data: media = [], isLoading: mediaLoading } = trpc.admin.media.list.useQuery();
   const [editing, setEditing] = useState<Record<string, any> | null>(null);
+  const [uploading, setUploading] = useState(false);
   const save = trpc.admin.content.save.useMutation({ onSuccess: () => { utils.admin.content.list.invalidate("clients"); utils.site.data.invalidate(); notifyPublicContentUpdated(); toast.success("تم حفظ بيانات شعار العميل وتحديث الموقع العام."); setEditing(null); }, onError: error => toast.error(error.message || "تعذر حفظ شعار العميل.") });
   const setPublication = trpc.admin.content.setPublication.useMutation({ onSuccess: result => { utils.admin.content.list.invalidate("clients"); utils.site.data.invalidate(); notifyPublicContentUpdated(); toast.success(result.published ? "تم اعتماد الشعار وظهر في الصفحة الرئيسية." : "تم إخفاء الشعار من الصفحة الرئيسية."); }, onError: error => toast.error(error.message || "تعذر تحديث اعتماد الشعار.") });
   const remove = trpc.admin.content.remove.useMutation({ onSuccess: () => { utils.admin.content.list.invalidate("clients"); utils.site.data.invalidate(); notifyPublicContentUpdated(); toast.success("تم حذف سجل العميل."); }, onError: () => toast.error("تعذر حذف سجل العميل.") });
   const images = (media as any[]).filter(item => item.kind === "image");
   const approved = (clients as any[]).filter(client => client.isActive && client.logoMediaId).length;
   const busy = clientsLoading || mediaLoading;
+  async function uploadLogo(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (file.size > 15 * 1024 * 1024) { toast.error("الحد الأقصى لشعار العميل هو 15 ميغابايت."); return; }
+    setUploading(true);
+    try {
+      const dataUrl = await toDataUrl(file);
+      const response = await fetch("/api/media/upload", { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "include", body: JSON.stringify({ fileName: file.name, mimeType: file.type || "image/png", dataUrl }) });
+      if (!response.ok) throw new Error();
+      await utils.admin.media.list.invalidate();
+      toast.success("تم رفع الشعار. اختره الآن عند إضافة العميل.");
+    } catch { toast.error("تعذر رفع الشعار. تأكد من أن الملف صورة وأن تسجيل دخول الإدارة نشط."); }
+    finally { setUploading(false); event.target.value = ""; }
+  }
   return (
     <section className="client-logo-manager">
-      <div className="entity-header"><div><p className="admin-eyebrow">APPROVED CLIENT LOGOS</p><h2>شعارات العملاء المعتمدين</h2></div><button className="admin-primary" onClick={() => setEditing({ isActive: true, sortOrder: (clients as any[]).length + 1 })}><Plus className="h-4 w-4" />إضافة شعار عميل</button></div>
+      <div className="entity-header"><div><p className="admin-eyebrow">APPROVED CLIENT LOGOS</p><h2>شعارات العملاء المعتمدين</h2></div><div className="client-logo-header-actions"><label className="admin-ghost upload-button"><Upload className="h-4 w-4" />{uploading ? "جارٍ الرفع…" : "رفع شعار"}<input type="file" accept="image/*" onChange={uploadLogo} disabled={uploading} /></label><button className="admin-primary" onClick={() => setEditing({ isActive: true, sortOrder: (clients as any[]).length + 1 })}><Plus className="h-4 w-4" />إضافة شعار عميل</button></div></div>
       <div className="client-logo-intro"><div><b>{approved}</b><span>شعار معتمد للعرض في الصفحة الرئيسية</span></div><p>اختر شعاراً مرفوعاً من مكتبة الوسائط، ثم فعّل الاعتماد. لن يظهر للزوار إلا العميل الذي يملك شعاراً ويكون مفعّلاً.</p></div>
       {busy ? <div className="admin-loading compact"><Loader2 className="animate-spin" /></div> : <div className="client-logo-admin-grid">
         {(clients as any[]).map(client => {
@@ -160,7 +175,7 @@ function ClientLogosManager() {
             <div className="client-logo-card-actions"><button className={cn("publication-button", approvedClient && "unpublish")} disabled={setPublication.isPending || !logo?.url} title={!logo?.url ? "اربط شعاراً أولاً" : undefined} onClick={() => setPublication.mutate({ entity: "clients", id: client.id, published: !approvedClient })}>{approvedClient ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}{approvedClient ? "إخفاء" : "اعتماد"}</button><button aria-label="تعديل شعار العميل" onClick={() => setEditing(client)}><MoreHorizontal className="h-4 w-4" /></button><button aria-label="حذف العميل" className="danger" onClick={() => { if (confirm("هل تريد حذف سجل هذا العميل؟")) remove.mutate({ entity: "clients", id: client.id }); }}><Trash2 className="h-4 w-4" /></button></div>
           </article>;
         })}
-        {(clients as any[]).length === 0 ? <div className="client-logo-empty"><ImagePlus className="h-8 w-8" /><h3>لم تضف شعارات عملاء بعد</h3><p>ارفع شعار العميل من «الوسائط»، ثم أضفه هنا واعتمده لعرضه في الصفحة الرئيسية.</p><button className="admin-primary" onClick={() => setEditing({ isActive: true, sortOrder: 1 })}><Plus className="h-4 w-4" />إضافة أول شعار</button></div> : null}
+        {(clients as any[]).length === 0 ? <div className="client-logo-empty"><ImagePlus className="h-8 w-8" /><h3>لم تضف شعارات عملاء بعد</h3><p>ارفع شعار العميل من هنا، ثم أضفه واعتمده لعرضه في الصفحة الرئيسية.</p><button className="admin-primary" onClick={() => setEditing({ isActive: true, sortOrder: 1 })}><Plus className="h-4 w-4" />إضافة أول شعار</button></div> : null}
       </div>}
       {editing !== null ? <ClientLogoEditor initial={editing} media={images} saving={save.isPending} onClose={() => setEditing(null)} onSave={values => save.mutate({ entity: "clients", id: editing.id, values })} /> : null}
     </section>

@@ -310,7 +310,7 @@ function InstagramVideoSection({ videos, locale, copy }: any) {
 }
 
 function ApprovedClientLogos({ clients, locale }: { clients: any[]; locale: Locale }) {
-  const logos = clients.filter(client => client.logo?.url);
+  const logos = clients.filter(client => client.isActive && client.logo?.url);
   if (!logos.length) return null;
   const title = locale === "ar" ? "شركاء وثقوا برؤيتنا" : "Trusted by Our Clients";
   const text = locale === "ar" ? "شعارات العملاء المعتمدين فقط، مرتبة من لوحة الإدارة." : "Approved client marks, curated directly from the administration dashboard.";
