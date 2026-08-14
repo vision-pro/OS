@@ -32,7 +32,7 @@ export function isConfiguredAdminEmail(email?: string | null): boolean {
 export function resolveUserRole(user: Pick<InsertUser, "openId" | "email" | "role">): "admin" | "user" | undefined {
   if (user.role !== undefined) return user.role;
   if (user.openId === ENV.ownerOpenId || isConfiguredAdminEmail(user.email)) return "admin";
-  return user.email !== undefined ? "user" : undefined;
+  return undefined;
 }
 
 export async function getDb() {

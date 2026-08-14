@@ -15,5 +15,6 @@ describe("admin email configuration", () => {
   it("does not downgrade an existing administrator when a session refresh has no email", () => {
     expect(resolveUserRole({ openId: "existing-admin" })).toBeUndefined();
     expect(resolveUserRole({ openId: "existing-admin", email: "qumraproduction.nj@gmail.com" })).toBe("admin");
+    expect(resolveUserRole({ openId: "ordinary-user", email: "other@example.com" })).toBeUndefined();
   });
 });
