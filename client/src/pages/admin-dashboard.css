@@ -22,6 +22,8 @@ body:has(.admin-page) [data-sidebar="sidebar"] p {
   --admin-orange: #f37420;
   --admin-line: #dbe1dd;
   --admin-canvas: #f3f5f3;
+  width: 100%;
+  box-sizing: border-box;
   max-width: 1440px;
   min-height: calc(100vh - 2rem);
   margin: 0 auto;
