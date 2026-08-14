@@ -171,6 +171,14 @@ export default function PublicSite({ slug }: SitePageProps) {
 
   useEffect(() => onPublicContentUpdated(() => { void refetch(); }), [refetch]);
 
+  useEffect(() => {
+    if (slug !== "home" || !data || window.location.hash !== "#clients") return;
+    const scrollToClientLogos = window.setTimeout(() => {
+      document.getElementById("clients")?.scrollIntoView({ block: "start" });
+    }, 0);
+    return () => window.clearTimeout(scrollToClientLogos);
+  }, [data, slug]);
+
   const currentPage = data?.pages.find(page => page.slug === slug) ?? data?.pages.find(page => page.slug === "home");
   const navPages = useMemo(() => data?.pages.filter(page => page.showInNavigation) ?? [], [data?.pages]);
   const company = (data?.settings.find(item => item.key === "company")?.value ?? {}) as Record<string, string>;
@@ -224,6 +232,13 @@ export default function PublicSite({ slug }: SitePageProps) {
     });
   }
 
+  function scrollToClientLogos() {
+    window.history.replaceState(null, "", "#clients");
+    window.setTimeout(() => {
+      document.getElementById("clients")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 0);
+  }
+
   if (isLoading) {
     return <div className="site-loader" dir={isAr ? "rtl" : "ltr"}><Loader2 className="h-7 w-7 animate-spin" />{copy.loading}</div>;
   }
@@ -243,7 +258,7 @@ export default function PublicSite({ slug }: SitePageProps) {
             <img src={logoUrl} alt="VISION Production" className="brand-logo" />
           </Link>
           <nav className="desktop-nav" aria-label={copy.menu}>
-            {navPages.map(page => page.slug === "clients" && slug === "home" ? <a key={page.slug} href="#clients">{tField(page, "title", locale)}</a> : <Link key={page.slug} href={`/${page.slug}`} className={slug === page.slug ? "active" : ""}>{tField(page, "title", locale)}</Link>)}
+            {navPages.map(page => page.slug === "clients" && slug === "home" ? <a key={page.slug} href="#clients" onClick={event => { event.preventDefault(); scrollToClientLogos(); }}>{tField(page, "title", locale)}</a> : <Link key={page.slug} href={`/${page.slug}`} className={slug === page.slug ? "active" : ""}>{tField(page, "title", locale)}</Link>)}
           </nav>
           <div className="nav-actions">
             <button className="language-button" onClick={() => setLocale(isAr ? "en" : "ar")} aria-label="Change language"><Globe2 className="h-4 w-4" />{isAr ? "EN" : "ع"}</button>
@@ -251,7 +266,7 @@ export default function PublicSite({ slug }: SitePageProps) {
             <button className="mobile-menu-button" onClick={() => setMenuOpen(!menuOpen)} aria-label={copy.menu}>{menuOpen ? <X /> : <Menu />}</button>
           </div>
         </div>
-        {menuOpen ? <div className="mobile-nav container">{navPages.map(page => page.slug === "clients" && slug === "home" ? <a key={page.slug} href="#clients" onClick={() => setMenuOpen(false)}>{tField(page, "title", locale)}</a> : <Link key={page.slug} href={`/${page.slug}`} onClick={() => setMenuOpen(false)}>{tField(page, "title", locale)}</Link>)}</div> : null}
+        {menuOpen ? <div className="mobile-nav container">{navPages.map(page => page.slug === "clients" && slug === "home" ? <a key={page.slug} href="#clients" onClick={event => { event.preventDefault(); setMenuOpen(false); scrollToClientLogos(); }}>{tField(page, "title", locale)}</a> : <Link key={page.slug} href={`/${page.slug}`} onClick={() => setMenuOpen(false)}>{tField(page, "title", locale)}</Link>)}</div> : null}
       </header>
 
       {slug === "home" ? (
