@@ -1,9 +1,18 @@
 export const MB = 1024 * 1024;
 export const MAX_VIDEO_UPLOAD_BYTES = 500 * MB;
 export const MAX_STANDARD_UPLOAD_BYTES = 50 * MB;
+export const ALLOWED_MEDIA_MIME_TYPES = new Set([
+  "video/mp4", "video/webm", "video/quicktime",
+  "image/jpeg", "image/png", "image/webp", "image/gif", "image/svg+xml",
+  "application/pdf",
+]);
 
 export function getUploadLimit(file: File) {
   return file.type.startsWith("video/") ? MAX_VIDEO_UPLOAD_BYTES : MAX_STANDARD_UPLOAD_BYTES;
+}
+
+export function isAllowedMediaFile(file: File) {
+  return ALLOWED_MEDIA_MIME_TYPES.has(file.type);
 }
 
 export function formatBytes(bytes: number) {

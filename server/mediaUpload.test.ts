@@ -14,4 +14,10 @@ describe("media upload limits", () => {
     expect(result.valid).toBe(false);
     expect(result.maxBytes).toBe(MAX_VIDEO_UPLOAD_BYTES);
   });
+
+  it("rejects formats that are not approved for the media library", () => {
+    const result = validateMediaUpload("application/x-msdownload", 1024);
+    expect(result.valid).toBe(false);
+    expect(result.validType).toBe(false);
+  });
 });

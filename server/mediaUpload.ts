@@ -6,6 +6,11 @@ import { storagePut } from "./storage";
 export const MB = 1024 * 1024;
 export const MAX_VIDEO_UPLOAD_BYTES = 500 * MB;
 export const MAX_STANDARD_UPLOAD_BYTES = 50 * MB;
+export const ALLOWED_MEDIA_MIME_TYPES = new Set([
+  "video/mp4", "video/webm", "video/quicktime",
+  "image/jpeg", "image/png", "image/webp", "image/gif", "image/svg+xml",
+  "application/pdf",
+]);
 
 function safeFileName(fileName: string) {
   const cleaned = fileName.toLowerCase().replace(/[^a-z0-9._-]+/g, "-").replace(/-+/g, "-");
@@ -25,7 +30,8 @@ export function getUploadLimit(mimeType: string) {
 
 export function validateMediaUpload(mimeType: string, sizeBytes: number) {
   const maxBytes = getUploadLimit(mimeType);
-  return { valid: sizeBytes > 0 && sizeBytes <= maxBytes, maxBytes };
+  const validType = ALLOWED_MEDIA_MIME_TYPES.has(mimeType);
+  return { valid: validType && sizeBytes > 0 && sizeBytes <= maxBytes, validType, maxBytes };
 }
 
 export function registerMediaUploadRoute(app: Express) {
@@ -40,7 +46,10 @@ export function registerMediaUploadRoute(app: Express) {
         const fileName = typeof req.query.fileName === "string" ? req.query.fileName : "";
         const mimeType = typeof req.query.mimeType === "string" ? req.query.mimeType : req.headers["content-type"] || "application/octet-stream";
         const buffer = Buffer.isBuffer(req.body) ? req.body : Buffer.alloc(0);
-        const { valid, maxBytes } = validateMediaUpload(mimeType, buffer.length);
+        const { valid, validType, maxBytes } = validateMediaUpload(mimeType, buffer.length);
+        if (!validType) {
+          return res.status(415).json({ error: "صيغة الملف غير مدعومة. الصيغ المسموحة: MP4 وWebM وMOV وJPG وPNG وWebP وSVG وPDF." });
+        }
         if (!fileName || !valid) {
           return res.status(413).json({ error: `حجم الملف يجب أن يكون بين 1 بايت و${Math.round(maxBytes / MB)} ميجابايت.` });
         }
