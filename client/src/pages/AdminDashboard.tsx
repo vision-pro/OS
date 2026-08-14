@@ -32,7 +32,6 @@ import {
 } from "lucide-react";
 import { ChangeEvent, FormEvent, useMemo, useState } from "react";
 import { toast } from "sonner";
-import "./admin-dashboard.css";
 
 type Tab = "overview" | "content" | "requests" | "media" | "instagram" | "users" | "settings";
 type Entity = "projects" | "categories" | "services" | "achievements" | "clients" | "partners" | "testimonials" | "faqs" | "pages";
