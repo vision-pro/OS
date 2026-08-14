@@ -65,7 +65,7 @@ export default function DashboardLayout({
             <p className="text-sm text-muted-foreground text-center max-w-sm">تتطلب لوحة التحكم تسجيل الدخول قبل الوصول إلى أدوات إدارة المحتوى.</p>
           </div>
           <Button
-            onClick={() => startLogin()}
+            onClick={() => startLogin(window.location.pathname === "/admin" ? "/admin" : undefined)}
             size="lg"
             className="w-full shadow-lg hover:shadow-xl transition-all"
           >
