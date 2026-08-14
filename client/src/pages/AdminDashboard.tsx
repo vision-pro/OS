@@ -6,9 +6,11 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { trpc } from "@/lib/trpc";
 import { cn } from "@/lib/utils";
+import { notifyPublicContentUpdated } from "@/lib/publication";
 import {
   BarChart3,
   CheckCircle2,
+  Eye,
   FileText,
   FolderKanban,
   ImagePlus,
@@ -25,10 +27,12 @@ import {
   Upload,
   Users,
   Video,
+  EyeOff,
   X,
 } from "lucide-react";
 import { ChangeEvent, FormEvent, useMemo, useState } from "react";
 import { toast } from "sonner";
+import "./admin-dashboard.css";
 
 type Tab = "overview" | "content" | "requests" | "media" | "instagram" | "users" | "settings";
 type Entity = "projects" | "categories" | "services" | "achievements" | "clients" | "partners" | "testimonials" | "faqs" | "pages";
@@ -66,7 +70,10 @@ const fieldsByEntity: Record<Entity, Array<{ key: string; label: string; type?: 
 
 function makeInitialValues(entity: Entity, row?: Record<string, any>): FormValues {
   const values: FormValues = {};
-  fieldsByEntity[entity].forEach(field => { values[field.key] = row?.[field.key] ?? (field.type === "checkbox" ? false : field.type === "number" ? "" : ""); });
+  fieldsByEntity[entity].forEach(field => {
+    const defaultChecked = field.type === "checkbox" && field.key === "isActive" && ["categories", "services", "clients", "partners"].includes(entity);
+    values[field.key] = row?.[field.key] ?? (field.type === "checkbox" ? defaultChecked : field.type === "select" ? field.options?.[0]?.[0] ?? "" : field.type === "number" ? "" : "");
+  });
   return values;
 }
 
@@ -95,13 +102,15 @@ function ContentManager() {
   const [editing, setEditing] = useState<Record<string, any> | null>(null);
   const { data = [], isLoading } = trpc.admin.content.list.useQuery(entity);
   const utils = trpc.useUtils();
-  const save = trpc.admin.content.save.useMutation({ onSuccess: () => { utils.admin.content.list.invalidate(entity); toast.success("تم حفظ العنصر."); setEditing(null); }, onError: () => toast.error("تعذر حفظ العنصر.") });
+  const save = trpc.admin.content.save.useMutation({ onSuccess: () => { utils.admin.content.list.invalidate(entity); utils.site.data.invalidate(); notifyPublicContentUpdated(); toast.success("تم حفظ العنصر وتحديث الموقع العام."); setEditing(null); }, onError: error => toast.error(error.message || "تعذر حفظ العنصر.") });
+  const setPublication = trpc.admin.content.setPublication.useMutation({ onSuccess: result => { utils.admin.content.list.invalidate(entity); utils.site.data.invalidate(); notifyPublicContentUpdated(); toast.success(result.published ? "تم النشر وهو ظاهر الآن في الموقع العام." : "تم إلغاء النشر وإخفاء العنصر من الموقع العام."); }, onError: error => toast.error(error.message || "تعذر تحديث حالة النشر.") });
   const remove = trpc.admin.content.remove.useMutation({ onSuccess: () => { utils.admin.content.list.invalidate(entity); toast.success("تم حذف العنصر."); }, onError: () => toast.error("تعذر حذف العنصر.") });
   const selected = entities.find(item => item.id === entity)!;
-  return <section className="content-manager"><aside className="entity-sidebar">{entities.map(item => <button key={item.id} onClick={() => { setEntity(item.id); setEditing(null); }} className={cn(entity === item.id && "active")}><item.icon className="h-4 w-4" /><span>{item.label}</span></button>)}</aside><div className="entity-content"><div className="entity-header"><div><p className="admin-eyebrow">{selected.label}</p><h2>{selected.hint}</h2></div><button className="admin-primary" onClick={() => setEditing({})}><Plus className="h-4 w-4" />إضافة عنصر</button></div>{isLoading ? <div className="admin-loading compact"><Loader2 className="animate-spin" /></div> : <div className="entity-table"><div className="entity-table-head"><span>العنصر</span><span>الحالة</span><span>إجراءات</span></div>{(data as Record<string, any>[]).map(row => <div className="entity-row" key={row.id}><div><b>{valueLabel(row)}</b><small>{row.slug ? `/${row.slug}` : row.titleEn || row.nameEn || ""}</small></div><div><StatusBadge row={row} /></div><div className="entity-actions"><button aria-label="تعديل" onClick={() => setEditing(row)}><MoreHorizontal className="h-4 w-4" /></button><button aria-label="حذف" className="danger" onClick={() => { if (confirm("هل تريد حذف هذا العنصر؟")) remove.mutate({ entity, id: row.id }); }}><Trash2 className="h-4 w-4" /></button></div></div>)}{data.length === 0 ? <div className="admin-empty">لا توجد عناصر بعد. أضف أول عنصر ليظهر في الموقع.</div> : null}</div>}</div>{editing !== null ? <ContentEditor entity={entity} initial={editing} saving={save.isPending} onClose={() => setEditing(null)} onSave={(values) => save.mutate({ entity, id: editing.id, values })} /> : null}</section>;
+  return <section className="content-manager"><aside className="entity-sidebar">{entities.map(item => <button key={item.id} onClick={() => { setEntity(item.id); setEditing(null); }} className={cn(entity === item.id && "active")}><item.icon className="h-4 w-4" /><span>{item.label}</span></button>)}</aside><div className="entity-content"><div className="entity-header"><div><p className="admin-eyebrow">{selected.label}</p><h2>{selected.hint}</h2></div><button className="admin-primary" onClick={() => setEditing({})}><Plus className="h-4 w-4" />إضافة عنصر</button></div><p className="admin-note">احفظ التعديلات أولاً، ثم استخدم زر «نشر» لإظهار العنصر فوراً في القسم المقابل من الواجهة العامة. لا تظهر المسودات للزوار.</p>{isLoading ? <div className="admin-loading compact"><Loader2 className="animate-spin" /></div> : <div className="entity-table"><div className="entity-table-head"><span>العنصر</span><span>الحالة</span><span>إجراءات</span></div>{(data as Record<string, any>[]).map(row => { const published = isEntityPublished(entity, row); return <div className="entity-row" key={row.id}><div><b>{valueLabel(row)}</b><small>{row.slug ? `/${row.slug}` : row.titleEn || row.nameEn || ""}</small></div><div><StatusBadge row={row} /></div><div className="entity-actions"><button className={cn("publication-button", published && "unpublish")} disabled={setPublication.isPending} onClick={() => setPublication.mutate({ entity, id: row.id, published: !published })}>{published ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}{published ? "إلغاء النشر" : "نشر"}</button><button aria-label="تعديل" onClick={() => setEditing(row)}><MoreHorizontal className="h-4 w-4" /></button><button aria-label="حذف" className="danger" onClick={() => { if (confirm("هل تريد حذف هذا العنصر؟")) remove.mutate({ entity, id: row.id }); }}><Trash2 className="h-4 w-4" /></button></div></div>; })}{data.length === 0 ? <div className="admin-empty">لا توجد عناصر بعد. أضف عنصراً ثم انشره ليظهر للزوار.</div> : null}</div>}</div>{editing !== null ? <ContentEditor entity={entity} initial={editing} saving={save.isPending} onClose={() => setEditing(null)} onSave={(values) => save.mutate({ entity, id: editing.id, values })} /> : null}</section>;
 }
 
 function StatusBadge({ row }: { row: Record<string, any> }) { const active = row.status === "published" || row.isActive || row.isPublished; const text = row.status ? ({ published: "منشور", draft: "مسودة", archived: "مؤرشف" } as Record<string, string>)[row.status] : active ? "نشط" : "غير منشور"; return <span className={cn("status-badge", active && "active")}>{text}</span>; }
+function isEntityPublished(entity: Entity, row: Record<string, any>) { return ["projects", "pages"].includes(entity) ? row.status === "published" : ["achievements", "testimonials", "faqs"].includes(entity) ? row.isPublished === true : row.isActive === true; }
 
 function ContentEditor({ entity, initial, saving, onClose, onSave }: { entity: Entity; initial: Record<string, any>; saving: boolean; onClose: () => void; onSave: (values: Record<string, unknown>) => void }) {
   const [values, setValues] = useState<FormValues>(() => makeInitialValues(entity, initial));

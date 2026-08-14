@@ -17,9 +17,10 @@ import {
   WandSparkles,
   X,
 } from "lucide-react";
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { toast } from "sonner";
+import { onPublicContentUpdated } from "@/lib/publication";
 
 type Locale = "ar" | "en";
 type SitePageProps = { slug: string };
@@ -158,13 +159,16 @@ function SectionTitle({ kicker, title, text }: { kicker: string; title: string; 
 }
 
 export default function PublicSite({ slug }: SitePageProps) {
-  const { data, isLoading, error } = trpc.site.data.useQuery();
+  const siteQuery = trpc.site.data.useQuery(undefined, { refetchOnWindowFocus: true });
+  const { data, isLoading, error, refetch } = siteQuery;
   const [locale, setLocale] = useState<Locale>("ar");
   const [menuOpen, setMenuOpen] = useState(false);
   const [activeCategory, setActiveCategory] = useState("all");
   const [, navigate] = useLocation();
   const copy = labels[locale];
   const isAr = locale === "ar";
+
+  useEffect(() => onPublicContentUpdated(() => { void refetch(); }), [refetch]);
 
   const currentPage = data?.pages.find(page => page.slug === slug) ?? data?.pages.find(page => page.slug === "home");
   const navPages = useMemo(() => data?.pages.filter(page => page.showInNavigation) ?? [], [data?.pages]);

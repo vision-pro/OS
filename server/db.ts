@@ -20,6 +20,7 @@ import {
   users,
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
+import { publicationUpdate } from "./content-publishing";
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
@@ -401,6 +402,14 @@ export async function saveAdminEntity(entity: AdminEntity, id: number | undefine
   }
   const result = await db.insert(table).values(cleanValues);
   return { id: Number(result[0].insertId) };
+}
+
+export async function setAdminEntityPublication(entity: AdminEntity, id: number, published: boolean) {
+  const db = await getDb();
+  if (!db) throw new Error("قاعدة البيانات غير متاحة حالياً");
+  const table = adminEntityMap[entity] as any;
+  await db.update(table).set(publicationUpdate(entity, published)).where(eq(table.id, id));
+  return { id, published };
 }
 
 export async function deleteAdminEntity(entity: AdminEntity, id: number) {

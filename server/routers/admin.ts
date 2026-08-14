@@ -11,6 +11,7 @@ import {
   listRequests,
   listSiteSettings,
   saveAdminEntity,
+  setAdminEntityPublication,
   saveSiteSetting,
   syncInstagramVideos,
   updateInstagramSchedule,
@@ -48,6 +49,9 @@ export const adminRouter = router({
         }),
       )
       .mutation(({ input }) => saveAdminEntity(input.entity as AdminEntity, input.id, input.values)),
+    setPublication: adminProcedure
+      .input(z.object({ entity: entitySchema, id: z.number().int().positive(), published: z.boolean() }))
+      .mutation(({ input }) => setAdminEntityPublication(input.entity as AdminEntity, input.id, input.published)),
     remove: adminProcedure
       .input(z.object({ entity: entitySchema, id: z.number().int().positive() }))
       .mutation(({ input }) => deleteAdminEntity(input.entity as AdminEntity, input.id)),
