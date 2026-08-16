@@ -17,10 +17,11 @@ import {
   WandSparkles,
   X,
 } from "lucide-react";
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { toast } from "sonner";
 import { onPublicContentUpdated } from "@/lib/publication";
+import { getCarouselIndex } from "@/lib/clientCarousel";
 import "./client-logos.css";
 
 type Locale = "ar" | "en";
@@ -328,10 +329,42 @@ function InstagramVideoSection({ videos, locale, copy }: any) {
 
 function ApprovedClientLogos({ clients, locale }: { clients: any[]; locale: Locale }) {
   const logos = clients.filter(client => client.isActive && client.logo?.url);
+  const trackRef = useRef<HTMLDivElement>(null);
+  const [visibleCount, setVisibleCount] = useState(3);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [isPaused, setPaused] = useState(false);
+
+  useEffect(() => {
+    const setViewport = () => setVisibleCount(window.innerWidth <= 640 ? 1 : window.innerWidth <= 960 ? 2 : 3);
+    setViewport();
+    window.addEventListener("resize", setViewport);
+    return () => window.removeEventListener("resize", setViewport);
+  }, []);
+
+  const moveTo = useCallback((index: number) => {
+    const track = trackRef.current;
+    const item = track?.querySelector<HTMLElement>(`[data-client-slide="${index}"]`);
+    item?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "start" });
+    setActiveIndex(index);
+  }, []);
+
+  const step = useCallback((direction: 1 | -1) => {
+    const next = getCarouselIndex(activeIndex, logos.length, visibleCount, direction);
+    moveTo(next);
+  }, [activeIndex, logos.length, moveTo, visibleCount]);
+
+  useEffect(() => {
+    if (logos.length <= visibleCount || isPaused || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const timer = window.setInterval(() => step(1), 4200);
+    return () => window.clearInterval(timer);
+  }, [isPaused, logos.length, step, visibleCount]);
+
   if (!logos.length) return null;
   const title = locale === "ar" ? "شركاء وثقوا برؤيتنا" : "Trusted by Our Clients";
   const text = locale === "ar" ? "شعارات العملاء المعتمدين فقط، مرتبة من لوحة الإدارة." : "Approved client marks, curated directly from the administration dashboard.";
-  return <section id="clients" className="client-logo-section"><div className="container"><div className="client-logo-section-head"><div><p className="kicker">SELECTED CLIENTS</p><h2>{title}</h2></div><p>{text}</p></div><div className="client-logo-showcase">{logos.map(client => { const content = <img src={client.logo.url} alt={tField(client, "name", locale)} loading="lazy" />; return client.websiteUrl ? <a key={client.id} className="client-logo-showcase-item" href={client.websiteUrl} target="_blank" rel="noreferrer">{content}</a> : <div key={client.id} className="client-logo-showcase-item">{content}</div>; })}</div></div></section>;
+  const canMove = logos.length > visibleCount;
+  const activeLabel = locale === "ar" ? `الشعار ${activeIndex + 1} من ${logos.length}` : `Logo ${activeIndex + 1} of ${logos.length}`;
+  return <section id="clients" className="client-logo-section"><div className="container"><div className="client-logo-section-head"><div><p className="kicker">SELECTED CLIENTS</p><h2>{title}</h2></div><p>{text}</p></div><div className="client-logo-carousel" role="region" aria-roledescription="carousel" aria-label={title} onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)} onFocusCapture={() => setPaused(true)} onBlurCapture={() => setPaused(false)} onTouchStart={() => setPaused(true)} onTouchEnd={() => setPaused(false)}><div ref={trackRef} className="client-logo-track" aria-live="polite">{logos.map((client, index) => { const content = <img src={client.logo.url} alt={tField(client, "name", locale)} loading="lazy" />; return client.websiteUrl ? <a data-client-slide={index} key={client.id} className="client-logo-showcase-item" href={client.websiteUrl} target="_blank" rel="noreferrer">{content}</a> : <div data-client-slide={index} key={client.id} className="client-logo-showcase-item">{content}</div>; })}</div>{canMove ? <div className="client-logo-carousel-controls"><button type="button" className="client-logo-arrow" onClick={() => step(-1)} aria-label={locale === "ar" ? "الشعار السابق" : "Previous logo"}><ArrowRight className="h-4 w-4" /></button><div className="client-logo-dots" role="tablist" aria-label={locale === "ar" ? "اختيار شعار العميل" : "Select client logo"}>{Array.from({ length: Math.max(1, logos.length - visibleCount + 1) }, (_, index) => <button key={index} type="button" role="tab" aria-selected={activeIndex === index} aria-label={`${activeLabel} ${index + 1}`} className={activeIndex === index ? "active" : ""} onClick={() => moveTo(index)} />)}</div><button type="button" className="client-logo-arrow" onClick={() => step(1)} aria-label={locale === "ar" ? "الشعار التالي" : "Next logo"}><ArrowLeft className="h-4 w-4" /></button></div> : null}</div></div></section>;
 }
 
 function ServicesSection({ data, locale, copy }: any) { return <section className="section section-white"><div className="container"><SectionTitle kicker="SERVICES" title={copy.services} text={copy.servicesText} /><div className="services-list">{data.services.map((service: any, index: number) => <article className="service-row" key={service.id}><span>0{index + 1}</span><div className="service-icon"><ServiceIcon name={service.icon} /></div><div><h3>{tField(service, "title", locale)}</h3><p>{tField(service, "description", locale)}</p></div></article>)}</div></div></section>; }
