@@ -22,6 +22,7 @@ import { Link, useLocation } from "wouter";
 import { toast } from "sonner";
 import { onPublicContentUpdated } from "@/lib/publication";
 import { getCarouselIndex } from "@/lib/clientCarousel";
+import { OPENING_DURATION_MS, shouldPresentOpening } from "@/lib/openingSequence";
 import "./client-logos.css";
 
 type Locale = "ar" | "en";
@@ -82,6 +83,7 @@ const labels = {
     latestVideos: "أحدث فيديوهاتنا",
     latestVideosText: "فيديوهات مختارة من الحساب الرسمي، تُعرض هنا بعد اعتمادها من الفريق.",
     watchOnInstagram: "شاهد على Instagram",
+    skipOpening: "تخطي العرض",
   },
   en: {
     work: "Portfolio",
@@ -134,6 +136,7 @@ const labels = {
     latestVideos: "Latest Videos",
     latestVideosText: "Selected videos from the official account, published here after team approval.",
     watchOnInstagram: "Watch on Instagram",
+    skipOpening: "Skip intro",
   },
 };
 
@@ -160,17 +163,49 @@ function SectionTitle({ kicker, title, text }: { kicker: string; title: string; 
   );
 }
 
+function OpeningSequence({ locale, onDismiss }: { locale: Locale; onDismiss: () => void }) {
+  const isAr = locale === "ar";
+  return (
+    <div className="opening-sequence" dir={isAr ? "rtl" : "ltr"} aria-label={isAr ? "عرض رؤية الافتتاحي" : "Ru'ya opening sequence"}>
+      <div className="opening-glow opening-glow-one" aria-hidden="true" />
+      <div className="opening-glow opening-glow-two" aria-hidden="true" />
+      <div className="opening-content">
+        <div className="opening-mark-wrap" aria-hidden="true"><img src={markUrl} alt="" className="opening-mark" /></div>
+        <p className="opening-kicker">VISION PRODUCTION / 01</p>
+        <p className="opening-statement">{isAr ? "الصورة تبدأ برؤية." : "Every frame begins with vision."}</p>
+        <div className="opening-meter" aria-hidden="true"><span /></div>
+        <p className="opening-meta">NAJAF — IRAQ · EST. 2026</p>
+      </div>
+      <button className="opening-skip" onClick={onDismiss}>{labels[locale].skipOpening}</button>
+    </div>
+  );
+}
+
 export default function PublicSite({ slug }: SitePageProps) {
   const siteQuery = trpc.site.data.useQuery(undefined, { refetchOnWindowFocus: true });
   const { data, isLoading, error, refetch } = siteQuery;
   const [locale, setLocale] = useState<Locale>("ar");
   const [menuOpen, setMenuOpen] = useState(false);
   const [activeCategory, setActiveCategory] = useState("all");
+  const [showOpening, setShowOpening] = useState(false);
   const [, navigate] = useLocation();
   const copy = labels[locale];
   const isAr = locale === "ar";
 
   useEffect(() => onPublicContentUpdated(() => { void refetch(); }), [refetch]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const previouslySeen = window.sessionStorage.getItem("vision-opening-seen") === "true";
+    if (!shouldPresentOpening({ isHome: slug === "home", previouslySeen, reducedMotion })) return;
+    setShowOpening(true);
+    const timer = window.setTimeout(() => {
+      window.sessionStorage.setItem("vision-opening-seen", "true");
+      setShowOpening(false);
+    }, OPENING_DURATION_MS);
+    return () => window.clearTimeout(timer);
+  }, [slug]);
 
   useEffect(() => {
     if (slug !== "home" || !data || window.location.hash !== "#clients") return;
@@ -242,6 +277,11 @@ export default function PublicSite({ slug }: SitePageProps) {
     });
   }
 
+  function dismissOpening() {
+    window.sessionStorage.setItem("vision-opening-seen", "true");
+    setShowOpening(false);
+  }
+
   if (isLoading) {
     return <div className="site-loader" dir={isAr ? "rtl" : "ltr"}><Loader2 className="h-7 w-7 animate-spin" />{copy.loading}</div>;
   }
@@ -255,6 +295,7 @@ export default function PublicSite({ slug }: SitePageProps) {
 
   return (
     <div className="vision-site" dir={isAr ? "rtl" : "ltr"}>
+      {showOpening ? <OpeningSequence locale={locale} onDismiss={dismissOpening} /> : null}
       <header className="site-header">
         <div className="container nav-inner">
           <Link href="/" className="brand-link" aria-label="Ru'ya for Artistic Production">
@@ -276,6 +317,8 @@ export default function PublicSite({ slug }: SitePageProps) {
         <>
           <section className="hero-section">
             <div className="hero-mark" aria-hidden="true"><img src={markUrl} alt="" /></div>
+            <div className="hero-ambient hero-ambient-one" aria-hidden="true" />
+            <div className="hero-ambient hero-ambient-two" aria-hidden="true" />
             <div className="container hero-grid">
               <div className="hero-copy">
                 <p className="kicker kicker-light">VISION PRODUCTION — NAJAF</p>
@@ -288,7 +331,10 @@ export default function PublicSite({ slug }: SitePageProps) {
               </div>
               <div className="showreel-frame" role="img" aria-label={isAr ? "مساحة عرض فيديو الشركة" : "Company showreel area"}>
                 <div className="frame-rule" />
+                <div className="frame-orbit" aria-hidden="true" />
+                <div className="frame-scan" aria-hidden="true" />
                 <img src={markUrl} alt="" className="frame-mark" />
+                <div className="frame-hud" aria-hidden="true"><span>REC <i /></span><span>24 FPS</span></div>
                 <div className="frame-copy"><span>{isAr ? "فيلم الرؤية" : "RU'YA REEL"}</span><strong>01 — 2026</strong></div>
                 <button className="play-button" onClick={() => navigate("/portfolio")} aria-label={isAr ? "مشاهدة الأعمال" : "View portfolio"}><Play className="h-5 w-5 fill-current" /></button>
               </div>
