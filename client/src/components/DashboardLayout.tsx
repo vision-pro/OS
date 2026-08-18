@@ -150,11 +150,11 @@ function DashboardLayoutContent({
       <div className="relative" ref={sidebarRef}>
         <Sidebar
           collapsible="icon"
-          className="border-r-0"
+          className="border-r-0 vision-admin-sidebar"
           disableTransition={isResizing}
         >
-          <SidebarHeader className="h-16 justify-center">
-            <div className="flex items-center gap-3 px-2 transition-all w-full">
+          <SidebarHeader className="h-auto justify-center p-3">
+            <div className="vision-admin-rail-brand flex items-center gap-3 px-2 transition-all w-full">
               <button
                 onClick={toggleSidebar}
                 className="h-8 w-8 flex items-center justify-center hover:bg-accent rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring shrink-0"
@@ -164,9 +164,8 @@ function DashboardLayoutContent({
               </button>
               {!isCollapsed ? (
                 <div className="flex items-center gap-2 min-w-0">
-                  <span className="font-semibold tracking-tight truncate">
-                    رؤية للإنتاج الفني
-                  </span>
+                  <div className="vision-admin-mark">V</div>
+                  <div className="min-w-0"><span className="font-semibold tracking-tight truncate">رؤية للإنتاج الفني</span><small>CONTROL ROOM</small></div>
                 </div>
               ) : null}
             </div>
@@ -195,7 +194,7 @@ function DashboardLayoutContent({
             </SidebarMenu>
           </SidebarContent>
 
-          <SidebarFooter className="p-3">
+          <SidebarFooter className="p-3 vision-admin-user-zone">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button className="flex items-center gap-3 rounded-lg px-1 py-1 hover:bg-accent/50 transition-colors w-full text-left group-data-[collapsible=icon]:justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-ring">
@@ -236,7 +235,7 @@ function DashboardLayoutContent({
         />
       </div>
 
-      <SidebarInset className="min-w-0 flex-1">
+      <SidebarInset className="min-w-0 flex-1 vision-admin-inset">
         {isMobile && (
           <div className="flex border-b h-14 items-center justify-between bg-background/95 px-2 backdrop-blur supports-[backdrop-filter]:backdrop-blur sticky top-0 z-40">
             <div className="flex items-center gap-2">
@@ -251,7 +250,7 @@ function DashboardLayoutContent({
             </div>
           </div>
         )}
-        <main className="w-full min-w-0 flex-1 p-4">{children}</main>
+        <main className="w-full min-w-0 flex-1 p-0 vision-admin-shell">{children}</main>
       </SidebarInset>
     </>
   );

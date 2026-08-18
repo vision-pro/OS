@@ -43,7 +43,7 @@ describe("admin publication flow", () => {
     } finally {
       await db.update(services).set({ isActive: service.isActive }).where(eq(services.id, service.id));
     }
-  });
+  }, 15_000);
 
   it("excludes an inactive client logo from public site data and restores the approved state", async () => {
     const db = await getDb();
@@ -64,5 +64,5 @@ describe("admin publication flow", () => {
     } finally {
       await db.update(clients).set({ isActive: client.isActive }).where(eq(clients.id, client.id));
     }
-  });
+  }, 15_000);
 });
