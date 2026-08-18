@@ -10,6 +10,7 @@
     "check": "tsc --noEmit",
     "format": "prettier --write .",
     "test": "vitest run",
+    "test:ci": "vitest run client/src/lib/openingSequence.test.ts client/src/lib/clientCarousel.test.ts client/src/lib/mediaUpload.test.ts server/mediaUpload.test.ts server/routers/site.test.ts",
     "db:push": "drizzle-kit generate && drizzle-kit migrate"
   },
   "dependencies": {
