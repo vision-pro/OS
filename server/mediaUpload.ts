@@ -1,7 +1,7 @@
 import express, { type Express, type Request, type Response } from "express";
 import { sdk } from "./_core/sdk";
 import { saveMediaAsset } from "./db";
-import { storagePut } from "./storage";
+import { storageCreatePresignedPut, storagePut } from "./storage";
 
 export const MB = 1024 * 1024;
 export const MAX_VIDEO_UPLOAD_BYTES = 500 * MB;
@@ -35,13 +35,60 @@ export function validateMediaUpload(mimeType: string, sizeBytes: number) {
 }
 
 export function registerMediaUploadRoute(app: Express) {
+  const requireAdmin = async (req: Request, res: Response) => {
+    const user = await sdk.authenticateRequest(req).catch(() => null);
+    if (!user || user.role !== "admin") {
+      res.status(403).json({ error: "لا تملك صلاحية إدارة الوسائط." });
+      return null;
+    }
+    return user;
+  };
+
+  app.post("/api/media/presign", express.json({ limit: "64kb" }), async (req: Request, res: Response) => {
+    try {
+      const user = await requireAdmin(req, res);
+      if (!user) return;
+      const { fileName, mimeType, sizeBytes } = req.body ?? {};
+      if (typeof fileName !== "string" || typeof mimeType !== "string" || !Number.isSafeInteger(sizeBytes)) {
+        return res.status(400).json({ error: "بيانات الملف غير مكتملة." });
+      }
+      const { valid, validType, maxBytes } = validateMediaUpload(mimeType, sizeBytes);
+      if (!validType) return res.status(415).json({ error: "صيغة الملف غير مدعومة." });
+      if (!valid) return res.status(413).json({ error: `حجم الملف يجب أن يكون بين 1 بايت و${Math.round(maxBytes / MB)} ميجابايت.` });
+      const stored = await storageCreatePresignedPut(`vision-production/media/${Date.now()}-${safeFileName(fileName)}`);
+      return res.status(201).json({ ...stored, mimeType, sizeBytes, originalName: fileName, createdById: user.id });
+    } catch (error) {
+      console.error("[Media Presign] Failed:", error);
+      return res.status(500).json({ error: "تعذر تجهيز رفع الملف الآن." });
+    }
+  });
+
+  app.post("/api/media/finalize", express.json({ limit: "64kb" }), async (req: Request, res: Response) => {
+    try {
+      const user = await requireAdmin(req, res);
+      if (!user) return;
+      const { storageKey, url, fileName, mimeType, sizeBytes } = req.body ?? {};
+      if (typeof storageKey !== "string" || !storageKey.startsWith("vision-production/media/") || typeof url !== "string" || typeof fileName !== "string" || typeof mimeType !== "string" || !Number.isSafeInteger(sizeBytes)) {
+        return res.status(400).json({ error: "تعذر تأكيد بيانات الملف." });
+      }
+      const { valid, validType, maxBytes } = validateMediaUpload(mimeType, sizeBytes);
+      if (!validType) return res.status(415).json({ error: "صيغة الملف غير مدعومة." });
+      if (!valid) return res.status(413).json({ error: `حجم الملف يجب أن يكون بين 1 بايت و${Math.round(maxBytes / MB)} ميجابايت.` });
+      const stored = await saveMediaAsset({ storageKey, url, originalName: fileName.slice(0, 255), mimeType, sizeBytes, kind: resolveKind(mimeType), altAr: null, altEn: null, createdById: user.id });
+      return res.status(201).json({ ...stored, url, storageKey, originalName: fileName, mimeType, sizeBytes });
+    } catch (error) {
+      console.error("[Media Finalize] Failed:", error);
+      return res.status(500).json({ error: "تم رفع الملف لكن تعذر تسجيله في المكتبة. حاول إعادة المحاولة." });
+    }
+  });
+
   app.post(
     "/api/media/upload",
     express.raw({ type: () => true, limit: MAX_VIDEO_UPLOAD_BYTES }),
     async (req: Request, res: Response) => {
       try {
-        const user = await sdk.authenticateRequest(req).catch(() => null);
-        if (!user || user.role !== "admin") return res.status(403).json({ error: "لا تملك صلاحية رفع الوسائط." });
+        const user = await requireAdmin(req, res);
+        if (!user) return;
 
         const fileName = typeof req.query.fileName === "string" ? req.query.fileName : "";
         const mimeType = typeof req.query.mimeType === "string" ? req.query.mimeType : req.headers["content-type"] || "application/octet-stream";

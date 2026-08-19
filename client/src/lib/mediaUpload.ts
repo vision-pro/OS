@@ -24,26 +24,34 @@ type UploadOptions = {
 };
 
 export async function uploadMediaFile(file: File, options: UploadOptions = {}) {
-  return await new Promise<Record<string, unknown>>((resolve, reject) => {
+  const presignResponse = await fetch("/api/media/presign", {
+    method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ fileName: file.name, mimeType: file.type || "application/octet-stream", sizeBytes: file.size }),
+  });
+  const presign = await presignResponse.json().catch(() => ({})) as { error?: string; uploadUrl?: string; key?: string; url?: string };
+  if (!presignResponse.ok || !presign.uploadUrl || !presign.key || !presign.url) throw new Error(presign.error || "تعذر تجهيز رفع الملف الآن.");
+  const uploadUrl = presign.uploadUrl;
+  const storageKey = presign.key;
+  const storageUrl = presign.url;
+  await new Promise<void>((resolve, reject) => {
     const request = new XMLHttpRequest();
-    const query = new URLSearchParams({
-      fileName: file.name,
-      mimeType: file.type || "application/octet-stream",
-    });
-
-    request.open("POST", `/api/media/upload?${query.toString()}`);
-    request.withCredentials = true;
+    request.open("PUT", uploadUrl);
     request.setRequestHeader("Content-Type", file.type || "application/octet-stream");
     request.upload.onprogress = event => {
       if (event.lengthComputable) options.onProgress?.(Math.min(100, Math.round((event.loaded / event.total) * 100)));
     };
-    request.onerror = () => reject(new Error("تعذر الاتصال بخدمة الرفع."));
+    request.onerror = () => reject(new Error("تعذر الاتصال بتخزين الوسائط."));
     request.onload = () => {
-      let body: { error?: string } = {};
-      try { body = JSON.parse(request.responseText || "{}"); } catch { /* Keep a generic error below. */ }
-      if (request.status >= 200 && request.status < 300) resolve(body);
-      else reject(new Error(body.error || "تعذر رفع الملف الآن."));
+      if (request.status >= 200 && request.status < 300) resolve();
+      else reject(new Error("تعذر رفع الملف إلى التخزين."));
     };
     request.send(file);
   });
+  const finalizeResponse = await fetch("/api/media/finalize", {
+    method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ storageKey, url: storageUrl, fileName: file.name, mimeType: file.type || "application/octet-stream", sizeBytes: file.size }),
+  });
+  const finalized = await finalizeResponse.json().catch(() => ({})) as Record<string, unknown> & { error?: string };
+  if (!finalizeResponse.ok) throw new Error(finalized.error || "تم رفع الملف لكن تعذر تسجيله في المكتبة.");
+  return finalized;
 }

@@ -21,6 +21,7 @@ import {
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 import { publicationUpdate } from "./content-publishing";
+import { syncEntityToSupabase, syncSupabaseMedia } from "./supabasePublishing";
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
@@ -412,6 +413,32 @@ export async function setAdminEntityPublication(entity: AdminEntity, id: number,
   return { id, published };
 }
 
+export async function syncAdminEntityToSupabase(entity: AdminEntity, id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("قاعدة البيانات غير متاحة حالياً");
+  const table = adminEntityMap[entity] as any;
+  const rows = await db.select().from(table).where(eq(table.id, id)).limit(1);
+  const row = rows[0] as Record<string, any> | undefined;
+  if (!row) throw new Error("العنصر غير موجود للمزامنة.");
+  const resolveMediaId = async (mediaId: number | null | undefined) => {
+    if (!mediaId) return null;
+    const mediaRows = await db.select().from(mediaAssets).where(eq(mediaAssets.id, mediaId)).limit(1);
+    return mediaRows[0] ? (await syncSupabaseMedia(mediaRows[0] as Record<string, any>)) ?? null : null;
+  };
+  const resolveCategoryId = async (categoryId: number | null | undefined) => {
+    if (!categoryId) return null;
+    const categoryRows = await db.select().from(portfolioCategories).where(eq(portfolioCategories.id, categoryId)).limit(1);
+    const category = categoryRows[0] as Record<string, any> | undefined;
+    if (!category) return null;
+    await syncEntityToSupabase("categories", category, { resolveMediaId, resolveCategoryId: async () => null });
+    const secret = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+    const response = await fetch(`https://hpzrsuygkbkbxfihgbyu.supabase.co/rest/v1/portfolio_categories?slug=eq.${encodeURIComponent(category.slug)}&select=id&limit=1`, { headers: { apikey: secret, Authorization: `Bearer ${secret}` } });
+    const result = await response.json();
+    return result[0]?.id ?? null;
+  };
+  await syncEntityToSupabase(entity, row, { resolveMediaId, resolveCategoryId });
+}
+
 export async function deleteAdminEntity(entity: AdminEntity, id: number) {
   const db = await getDb();
   if (!db) throw new Error("قاعدة البيانات غير متاحة حالياً");
@@ -443,6 +470,32 @@ export async function saveMediaAsset(values: typeof mediaAssets.$inferInsert) {
   if (!db) throw new Error("قاعدة البيانات غير متاحة حالياً");
   const result = await db.insert(mediaAssets).values(values);
   return { id: Number(result[0].insertId) };
+}
+
+export async function deleteMediaAsset(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("قاعدة البيانات غير متاحة حالياً");
+  const [projectRows, serviceRows, achievementRows, clientRows, partnerRows, testimonialRows, pageRows] = await Promise.all([
+    db.select({ id: projects.id, coverMediaId: projects.coverMediaId, mediaIds: projects.mediaIds }).from(projects),
+    db.select({ id: services.id, coverMediaId: services.coverMediaId }).from(services),
+    db.select({ id: achievements.id, mediaId: achievements.mediaId }).from(achievements),
+    db.select({ id: clients.id, logoMediaId: clients.logoMediaId }).from(clients),
+    db.select({ id: partners.id, logoMediaId: partners.logoMediaId }).from(partners),
+    db.select({ id: testimonials.id, avatarMediaId: testimonials.avatarMediaId }).from(testimonials),
+    db.select({ id: pages.id, heroMediaId: pages.heroMediaId }).from(pages),
+  ]);
+  const references = [
+    ...projectRows.filter(row => row.coverMediaId === id || row.mediaIds?.includes(id)).map(row => `مشروع #${row.id}`),
+    ...serviceRows.filter(row => row.coverMediaId === id).map(row => `خدمة #${row.id}`),
+    ...achievementRows.filter(row => row.mediaId === id).map(row => `إنجاز #${row.id}`),
+    ...clientRows.filter(row => row.logoMediaId === id).map(row => `عميل #${row.id}`),
+    ...partnerRows.filter(row => row.logoMediaId === id).map(row => `شريك #${row.id}`),
+    ...testimonialRows.filter(row => row.avatarMediaId === id).map(row => `شهادة #${row.id}`),
+    ...pageRows.filter(row => row.heroMediaId === id).map(row => `صفحة #${row.id}`),
+  ];
+  if (references.length) throw new Error(`لا يمكن حذف الوسائط لأنها مرتبطة بـ ${references.slice(0, 3).join("، ")}. أزل الرابط أولاً.`);
+  await db.delete(mediaAssets).where(eq(mediaAssets.id, id));
+  return { id };
 }
 
 export async function listRequests(kind: "bookings" | "contacts") {

@@ -1,6 +1,7 @@
 import { adminProcedure, router } from "../_core/trpc";
 import {
   AdminEntity,
+  deleteMediaAsset,
   deleteAdminEntity,
   getAdminOverview,
   listAdminEntity,
@@ -12,6 +13,7 @@ import {
   listSiteSettings,
   saveAdminEntity,
   setAdminEntityPublication,
+  syncAdminEntityToSupabase,
   saveSiteSetting,
   syncInstagramVideos,
   updateInstagramSchedule,
@@ -51,13 +53,18 @@ export const adminRouter = router({
       .mutation(({ input }) => saveAdminEntity(input.entity as AdminEntity, input.id, input.values)),
     setPublication: adminProcedure
       .input(z.object({ entity: entitySchema, id: z.number().int().positive(), published: z.boolean() }))
-      .mutation(({ input }) => setAdminEntityPublication(input.entity as AdminEntity, input.id, input.published)),
+      .mutation(async ({ input }) => {
+        const result = await setAdminEntityPublication(input.entity as AdminEntity, input.id, input.published);
+        await syncAdminEntityToSupabase(input.entity as AdminEntity, input.id);
+        return result;
+      }),
     remove: adminProcedure
       .input(z.object({ entity: entitySchema, id: z.number().int().positive() }))
       .mutation(({ input }) => deleteAdminEntity(input.entity as AdminEntity, input.id)),
   }),
   media: router({
     list: adminProcedure.query(async () => listMedia()),
+    remove: adminProcedure.input(z.object({ id: z.number().int().positive() })).mutation(({ input }) => deleteMediaAsset(input.id)),
   }),
   requests: router({
     list: adminProcedure.input(z.enum(["bookings", "contacts"])).query(({ input }) => listRequests(input)),
