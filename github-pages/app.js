@@ -163,6 +163,10 @@ document.querySelector('#contact-form').addEventListener('submit', async event =
   event.currentTarget.reset();
 });
 
-document.querySelector('#year').textContent = new Date().getFullYear();
-initializeClientCarousel();
-await Promise.all([loadServices(), loadProjects(), loadClients()]);
+async function initializePage() {
+  document.querySelector('#year').textContent = new Date().getFullYear();
+  initializeClientCarousel();
+  await Promise.all([loadServices(), loadProjects(), loadClients()]);
+}
+
+void initializePage();
