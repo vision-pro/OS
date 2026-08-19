@@ -23,6 +23,7 @@ import { toast } from "sonner";
 import { onPublicContentUpdated } from "@/lib/publication";
 import { getCarouselIndex } from "@/lib/clientCarousel";
 import { OPENING_DURATION_MS, shouldPresentOpening } from "@/lib/openingSequence";
+import { getPublicSiteRedirectTarget } from "@/lib/publicSiteRedirect";
 import "./client-logos.css";
 
 type Locale = "ar" | "en";
@@ -191,6 +192,11 @@ export default function PublicSite({ slug }: SitePageProps) {
   const [, navigate] = useLocation();
   const copy = labels[locale];
   const isAr = locale === "ar";
+
+  useEffect(() => {
+    const target = getPublicSiteRedirectTarget(window.location);
+    if (target) window.location.replace(target);
+  }, []);
 
   useEffect(() => onPublicContentUpdated(() => { void refetch(); }), [refetch]);
 
