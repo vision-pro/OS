@@ -8,6 +8,16 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet" />
     <title>رؤية للإنتاج الفني | VISION Production</title>
+    <script>
+      (function () {
+        var isPublicManusSite = window.location.hostname === "visionportf-gwxs956w.manus.space";
+        var isAdminRoute = window.location.pathname.indexOf("/admin") === 0;
+        var remainOnManus = new URLSearchParams(window.location.search).get("stay") === "1";
+        if (isPublicManusSite && !isAdminRoute && !remainOnManus) {
+          window.location.replace("https://vision-pro.github.io/OS/" + window.location.search + window.location.hash);
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
