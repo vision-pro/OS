@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="رؤية للإنتاج الفني — نصنع الصورة التي تُروى." />
+    <meta name="theme-color" content="#173d3b" />
+    <title>رؤية للإنتاج الفني</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Alexandria:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="wordmark" href="#top" aria-label="رؤية للإنتاج الفني">
+        <span class="wordmark-mark">▶</span><span>VISION</span>
+      </a>
+      <nav aria-label="التنقل الرئيسي">
+        <a href="#services">خدماتنا</a>
+        <a href="#work">الأعمال</a>
+        <a href="#clients">العملاء</a>
+        <a href="#contact">تواصل معنا</a>
+      </nav>
+      <a class="nav-cta" href="#booking">احجز مشروعك</a>
+    </header>
+
+    <main id="top">
+      <section class="hero">
+        <div class="hero-frame hero-frame-large" aria-hidden="true"></div>
+        <div class="hero-copy">
+          <p class="eyebrow"><span class="record-dot"></span> VISION PRODUCTION — NAJAF</p>
+          <h1>نصنع الصورة<br />التي تُروى</h1>
+          <p class="hero-description">استديو إنتاج إبداعي يحوّل الرؤى إلى حكايات بصرية دقيقة، جريئة، وقابلة للتذكّر.</p>
+          <div class="hero-actions">
+            <a class="button button-accent" href="#work">شاهد أعمالنا <span>←</span></a>
+            <a class="button button-ghost" href="#booking">اطلب استشارة</a>
+          </div>
+        </div>
+        <div class="director-monitor" aria-label="إطار إنتاج بصري">
+          <div class="monitor-meta"><span>FPS 24</span><span><i></i> REC</span></div>
+          <div class="monitor-orbit"></div>
+          <div class="monitor-play">▶</div>
+          <div class="monitor-footer"><span>2026 — 01</span><span>فيلم الرؤية</span></div>
+        </div>
+      </section>
+
+      <section id="services" class="section section-light">
+        <div class="section-heading">
+          <p class="eyebrow teal">SERVICES — 01</p>
+          <h2>خدمات متصلة برؤيتك</h2>
+          <p>من الفكرة الأولى إلى اللقطة الأخيرة، نبني التجربة بتركيز إبداعي وتنفيذ منظم.</p>
+        </div>
+        <div id="services-grid" class="service-grid" aria-live="polite">
+          <p class="loading">جارٍ تحميل الخدمات…</p>
+        </div>
+      </section>
+
+      <section id="work" class="section section-dark work-section">
+        <div class="section-heading heading-dark">
+          <p class="eyebrow orange">SELECTED WORK — 02</p>
+          <h2>أعمال مختارة</h2>
+          <p>نعرض المشاريع المنشورة والمعتمدة من لوحة إدارة رؤية.</p>
+        </div>
+        <div id="projects-grid" class="project-grid" aria-live="polite">
+          <p class="loading loading-dark">جارٍ تحميل الأعمال…</p>
+        </div>
+      </section>
+
+      <section id="clients" class="section clients-section">
+        <div class="section-heading">
+          <p class="eyebrow teal">SELECTED CLIENTS — 03</p>
+          <h2>شركاء وثقوا برؤيتنا</h2>
+        </div>
+        <div id="clients-grid" class="client-grid" aria-live="polite">
+          <p class="loading">جارٍ تحميل الشعارات…</p>
+        </div>
+      </section>
+
+      <section id="booking" class="section booking-section">
+        <div class="booking-copy">
+          <p class="eyebrow orange">START A PROJECT — 04</p>
+          <h2>لنبدأ فكرةً<br />تستحق أن تُرى</h2>
+          <p>أرسل تفاصيلك الأولية، وسنفتح رسالة WhatsApp جاهزة بعد حفظ طلبك للمراجعة.</p>
+        </div>
+        <form id="booking-form" class="studio-form">
+          <label>الاسم <input name="name" required minlength="2" autocomplete="name" /></label>
+          <label>رقم الهاتف <input name="phone" required minlength="5" inputmode="tel" autocomplete="tel" /></label>
+          <label>نوع المشروع <input name="project_type" placeholder="مثال: فيلم تعريفي" /></label>
+          <label class="form-wide">رسالتك <textarea name="message" rows="3" placeholder="ما الذي تتطلع إلى إنتاجه؟"></textarea></label>
+          <button class="button button-accent" type="submit">احفظ الطلب وافتح WhatsApp <span>←</span></button>
+          <p id="booking-status" class="form-status" role="status"></p>
+        </form>
+      </section>
+
+      <section id="contact" class="section contact-section">
+        <div class="section-heading heading-dark">
+          <p class="eyebrow orange">CONTACT — 05</p>
+          <h2>لديك سؤال؟</h2>
+        </div>
+        <form id="contact-form" class="contact-form">
+          <input name="name" required minlength="2" placeholder="الاسم" aria-label="الاسم" />
+          <input name="email" type="email" placeholder="البريد الإلكتروني (اختياري)" aria-label="البريد الإلكتروني" />
+          <textarea name="message" required minlength="3" rows="3" placeholder="اكتب رسالتك" aria-label="رسالتك"></textarea>
+          <button class="button button-accent" type="submit">إرسال الرسالة</button>
+          <p id="contact-status" class="form-status" role="status"></p>
+        </form>
+      </section>
+    </main>
+
+    <footer>
+      <span>© <span id="year"></span> رؤية للإنتاج الفني</span>
+      <a href="https://wa.me/9647760076003" target="_blank" rel="noreferrer">+964 776 007 6003</a>
+    </footer>
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>
