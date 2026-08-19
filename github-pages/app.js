@@ -1,9 +1,28 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { siteConfig } from './config.js';
 import { getCarouselScrollAmount, getClientLogoFallback, getServiceIconMarkup } from './presentation-utils.js';
 import { buildWhatsAppUrl, escapeHtml } from './site-utils.js';
 
-const supabase = createClient(siteConfig.supabaseUrl, siteConfig.supabasePublishableKey);
+const apiHeaders = {
+  apikey: siteConfig.supabasePublishableKey,
+  Authorization: `Bearer ${siteConfig.supabasePublishableKey}`,
+  'Content-Type': 'application/json',
+};
+
+async function readPublicTable(table, select, order) {
+  const params = new URLSearchParams({ select, order });
+  const response = await fetch(`${siteConfig.supabaseUrl}/rest/v1/${table}?${params}`, { headers: apiHeaders });
+  if (!response.ok) throw new Error(`Unable to read ${table}`);
+  return response.json();
+}
+
+async function insertPublicRecord(table, values) {
+  const response = await fetch(`${siteConfig.supabaseUrl}/rest/v1/${table}`, {
+    method: 'POST',
+    headers: { ...apiHeaders, Prefer: 'return=minimal' },
+    body: JSON.stringify(values),
+  });
+  if (!response.ok) throw new Error(`Unable to add ${table}`);
+}
 
 function renderEmpty(element, message) {
   element.innerHTML = `<p class="empty-state">${escapeHtml(message)}</p>`;
@@ -16,8 +35,10 @@ function serviceOptionMarkup(service) {
 async function loadServices() {
   const element = document.querySelector('#services-grid');
   const select = document.querySelector('#booking-service');
-  const { data, error } = await supabase.from('services').select('id, title_ar, summary_ar, icon').order('sort_order');
-  if (error) {
+  let data;
+  try {
+    data = await readPublicTable('services', 'id,title_ar,summary_ar,icon', 'sort_order.asc');
+  } catch {
     renderEmpty(element, 'تعذر تحميل الخدمات حالياً.');
     return;
   }
@@ -36,8 +57,12 @@ async function loadServices() {
 
 async function loadProjects() {
   const element = document.querySelector('#projects-grid');
-  const { data, error } = await supabase.from('projects').select('id, title_ar, summary_ar, client_name, project_date, media_assets(public_url, kind, alt_ar)').order('published_at', { ascending: false });
-  if (error) return renderEmpty(element, 'تعذر تحميل الأعمال حالياً.');
+  let data;
+  try {
+    data = await readPublicTable('projects', 'id,title_ar,summary_ar,client_name,project_date,media_assets(public_url,kind,alt_ar)', 'published_at.desc');
+  } catch {
+    return renderEmpty(element, 'تعذر تحميل الأعمال حالياً.');
+  }
   if (!data?.length) return renderEmpty(element, 'لا توجد مشاريع منشورة حالياً. أضف مشاريعك من لوحة الإدارة لتظهر هنا تلقائياً.');
   element.innerHTML = data.map((project, index) => {
     const media = project.media_assets;
@@ -52,8 +77,12 @@ async function loadProjects() {
 
 async function loadClients() {
   const element = document.querySelector('#clients-grid');
-  const { data, error } = await supabase.from('clients').select('id, name_ar, name_en, media_assets(public_url, alt_ar)').order('sort_order');
-  if (error) return renderEmpty(element, 'تعذر تحميل الشعارات حالياً.');
+  let data;
+  try {
+    data = await readPublicTable('clients', 'id,name_ar,name_en,media_assets(public_url,alt_ar)', 'sort_order.asc');
+  } catch {
+    return renderEmpty(element, 'تعذر تحميل الشعارات حالياً.');
+  }
   if (!data?.length) return renderEmpty(element, 'ستظهر شعارات العملاء المعتمدة هنا.');
   element.innerHTML = data.map((client, index) => {
     const logo = client.media_assets?.public_url || getClientLogoFallback(index, siteConfig.assetBaseUrl);
@@ -83,16 +112,14 @@ document.querySelector('#booking-form').addEventListener('submit', async event =
   const button = event.currentTarget.querySelector('button');
   button.disabled = true;
   setStatus('#booking-status', 'جارٍ حفظ الطلب…');
-  const { error } = await supabase.from('bookings').insert({
-    name: form.get('name')?.trim(),
-    phone: form.get('phone')?.trim(),
-    company: form.get('company')?.trim() || null,
-    service_id: form.get('service_id') || null,
-    project_type: form.get('project_type')?.trim() || null,
-    requested_date: form.get('requested_date') || null,
-    message: form.get('message')?.trim() || null,
-    preferred_language: 'ar',
-  });
+  let error = false;
+  try {
+    await insertPublicRecord('bookings', {
+      name: form.get('name')?.trim(), phone: form.get('phone')?.trim(), company: form.get('company')?.trim() || null,
+      service_id: form.get('service_id') || null, project_type: form.get('project_type')?.trim() || null,
+      requested_date: form.get('requested_date') || null, message: form.get('message')?.trim() || null, preferred_language: 'ar',
+    });
+  } catch { error = true; }
   button.disabled = false;
   if (error) return setStatus('#booking-status', 'تعذر حفظ الطلب. تحقق من الحقول ثم حاول مجدداً.', true);
   setStatus('#booking-status', 'تم حفظ طلبك. سنفتح WhatsApp الآن.');
@@ -106,12 +133,13 @@ document.querySelector('#contact-form').addEventListener('submit', async event =
   const button = event.currentTarget.querySelector('button');
   button.disabled = true;
   setStatus('#contact-status', 'جارٍ إرسال رسالتك…');
-  const { error } = await supabase.from('contact_requests').insert({
-    name: form.get('name')?.trim(),
-    email: form.get('email')?.trim() || null,
-    message: form.get('message')?.trim(),
-    preferred_language: 'ar',
-  });
+  let error = false;
+  try {
+    await insertPublicRecord('contact_requests', {
+      name: form.get('name')?.trim(), email: form.get('email')?.trim() || null,
+      message: form.get('message')?.trim(), preferred_language: 'ar',
+    });
+  } catch { error = true; }
   button.disabled = false;
   if (error) return setStatus('#contact-status', 'تعذر حفظ الرسالة. حاول مجدداً.', true);
   setStatus('#contact-status', 'وصلت رسالتك بنجاح. شكراً لتواصلك.');
