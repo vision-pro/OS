@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { notifyPublicContentUpdated } from "@/lib/publication";
 import { formatBytes, getUploadLimit, isAllowedMediaFile, uploadMediaFile } from "@/lib/mediaUpload";
 import { normalizeMediaIds, toggleProjectMediaId } from "@/lib/projectMediaSelection";
+import { pageTemplates } from "@/lib/pageTemplates";
 import {
   BarChart3,
   CheckCircle2,
@@ -163,7 +164,14 @@ function ProjectMediaPicker({ media, loading, selectedIds, coverId, onToggle, on
 
 function SingleMediaPicker({ media, loading, selectedId, onSelect, title, description }: { media: Record<string, any>[]; loading: boolean; selectedId: number | null; onSelect: (id: number | null) => void; title: string; description: string }) { return <section className="visual-picker single-media-picker"><div><p className="admin-eyebrow">MEDIA SELECTION</p><h3>{title}</h3><p>{description}</p></div>{loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <div className="project-media-grid"><button type="button" className={cn("media-none-option", !selectedId && "selected")} onClick={() => onSelect(null)}>بدون وسائط</button>{media.map(item => <button type="button" className={cn("project-media-choice", selectedId === item.id && "selected")} key={item.id} onClick={() => onSelect(item.id)}>{item.kind === "image" ? <img src={item.url} alt={item.altAr || item.originalName} /> : <div className="media-file"><Video className="h-6 w-6" /><span>{item.kind === "video" ? "VIDEO" : item.kind.toUpperCase()}</span></div>}<div className="project-media-meta"><b>{item.originalName}</b><small>{selectedId === item.id ? "محدّد" : formatBytes(item.sizeBytes)}</small></div></button>)}</div>}</section>; }
 
-function EditorField({ field, value, onChange }: { field: any; value: any; onChange: (value: any) => void }) { return <div className={cn("editor-field", field.type === "textarea" && "wide", field.type === "checkbox" && "checkbox-field")}><Label>{field.label}{field.required ? " *" : ""}</Label>{field.type === "textarea" ? <Textarea required={field.required} value={String(value ?? "")} onChange={event => onChange(event.target.value)} /> : field.type === "checkbox" ? <button type="button" onClick={() => onChange(!value)} className={cn("toggle", value && "on")}><span />{value ? "مفعّل" : "غير مفعّل"}</button> : field.type === "select" ? <select value={String(value || field.options?.[0]?.[0] || "")} onChange={event => onChange(event.target.value)}>{field.options?.map(([val, label]: [string, string]) => <option key={val} value={val}>{label}</option>)}</select> : <Input type={field.type === "number" ? "number" : "text"} required={field.required} value={String(value ?? "")} onChange={event => onChange(event.target.value)} />}</div>; }
+function PageTemplatePicker({ value, onChange }: { value: string; onChange: (value: string) => void }) {
+  return <section className="page-template-picker"><div><Label>اختر شكل الصفحة *</Label><p>حدد الغرض من الصفحة بصرياً؛ سيظهر النموذج المناسب عند حفظ المحتوى.</p></div><div className="page-template-grid" role="radiogroup" aria-label="اختر قالب الصفحة">{pageTemplates.map(template => <button type="button" role="radio" aria-checked={value === template.value} key={template.value} className={cn("page-template-card", value === template.value && "selected")} onClick={() => onChange(template.value)}><b>{template.label}</b><small>{template.description}</small></button>)}</div></section>;
+}
+
+function EditorField({ field, value, onChange }: { field: any; value: any; onChange: (value: any) => void }) {
+  if (field.key === "template") return <PageTemplatePicker value={String(value || "landing")} onChange={onChange} />;
+  return <div className={cn("editor-field", field.type === "textarea" && "wide", field.type === "checkbox" && "checkbox-field")}><Label>{field.label}{field.required ? " *" : ""}</Label>{field.type === "textarea" ? <Textarea required={field.required} value={String(value ?? "")} onChange={event => onChange(event.target.value)} /> : field.type === "checkbox" ? <button type="button" onClick={() => onChange(!value)} className={cn("toggle", value && "on")}><span />{value ? "مفعّل" : "غير مفعّل"}</button> : field.type === "select" ? <select value={String(value || field.options?.[0]?.[0] || "")} onChange={event => onChange(event.target.value)}>{field.options?.map(([val, label]: [string, string]) => <option key={val} value={val}>{label}</option>)}</select> : <Input type={field.type === "number" ? "number" : "text"} required={field.required} value={String(value ?? "")} onChange={event => onChange(event.target.value)} />}</div>;
+}
 
 function RequestsManager() {
   const [kind, setKind] = useState<"bookings" | "contacts">("bookings");
