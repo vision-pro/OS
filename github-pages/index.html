@@ -18,10 +18,11 @@
     <link rel="stylesheet" href="./styles.css?v=project-presentation-2" />
     <script>
       (function () {
-        function recoverStyles() {
+        function recoverStyles(attempt) {
         var link = document.querySelector('link[href*="styles.css"]');
         if (!link || (link.sheet && link.sheet.cssRules && link.sheet.cssRules.length > 0)) return;
         fetch(link.href, { cache: 'no-store' }).then(function (response) { return response.text(); }).then(function (css) {
+          if (css.length < 16000 && attempt < 4) { setTimeout(function () { recoverStyles(attempt + 1); }, 1200); return; }
           if (css.length < 16000) return;
           var existing = document.querySelector('style[data-css-recovery]');
           if (existing) existing.remove();
@@ -31,7 +32,7 @@
           document.head.appendChild(style);
         }).catch(function () {});
         }
-        setTimeout(recoverStyles, 4200);
+        setTimeout(function () { recoverStyles(0); }, 4200);
       })();
     </script>
   </head>
