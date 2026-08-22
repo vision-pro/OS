@@ -188,6 +188,62 @@ async function loadClients() {
   }).join('');
 }
 
+function mediaLogoMarkup(media, label) {
+  const url = resolveMediaUrl(media?.public_url);
+  return url ? `<img src="${escapeHtml(url)}" alt="${escapeHtml(media?.alt_ar || label)}" loading="lazy" />` : `<span>${escapeHtml(label)}</span>`;
+}
+
+async function loadAchievements() {
+  const element = document.querySelector('#achievements-grid');
+  if (!element) return;
+  try {
+    const data = await readPublicTable('achievements', 'id,title_ar,description_ar,achievement_date,media:media_assets!achievements_media_id_fkey(public_url,alt_ar,kind)', 'sort_order.asc');
+    if (!data?.length) return renderEmpty(element, 'لا توجد إنجازات منشورة حالياً.');
+    element.innerHTML = data.map((item, index) => `<article class="milestone-card"><span class="milestone-number">${String(index + 1).padStart(2, '0')}</span>${item.media?.kind === 'image' ? `<img src="${escapeHtml(resolveMediaUrl(item.media.public_url))}" alt="${escapeHtml(item.media.alt_ar || item.title_ar)}" loading="lazy" />` : ''}<div><p>${escapeHtml(item.achievement_date || 'إنجاز معتمد')}</p><h3>${escapeHtml(item.title_ar)}</h3><span>${escapeHtml(item.description_ar || '')}</span></div></article>`).join('');
+  } catch { renderEmpty(element, 'تعذر تحميل الإنجازات حالياً.'); }
+}
+
+async function loadPartners() {
+  const element = document.querySelector('#partners-grid');
+  if (!element) return;
+  try {
+    const data = await readPublicTable('partners', 'id,name_ar,name_en,media_assets(public_url,alt_ar)', 'sort_order.asc');
+    if (!data?.length) return renderEmpty(element, 'ستظهر شعارات الشركاء المعتمدين هنا.');
+    element.innerHTML = data.map(item => `<article class="partner-card">${mediaLogoMarkup(item.media_assets, item.name_ar || item.name_en)}</article>`).join('');
+  } catch { renderEmpty(element, 'تعذر تحميل الشركاء حالياً.'); }
+}
+
+async function loadTestimonials() {
+  const element = document.querySelector('#testimonials-grid');
+  if (!element) return;
+  try {
+    const data = await readPublicTable('testimonials', 'id,author_name,author_role_ar,quote_ar,source_url,avatar:media_assets!testimonials_avatar_media_id_fkey(public_url,alt_ar)', 'sort_order.asc');
+    if (!data?.length) return renderEmpty(element, 'لا توجد شهادات منشورة حالياً.');
+    element.innerHTML = data.map(item => `<article class="testimonial-card"><p>“${escapeHtml(item.quote_ar)}”</p><footer>${item.avatar?.public_url ? `<img src="${escapeHtml(resolveMediaUrl(item.avatar.public_url))}" alt="${escapeHtml(item.avatar.alt_ar || item.author_name)}" />` : ''}<div><b>${escapeHtml(item.author_name)}</b><span>${escapeHtml(item.author_role_ar || '')}</span></div>${item.source_url ? `<a href="${escapeHtml(item.source_url)}" target="_blank" rel="noreferrer">المصدر ↗</a>` : ''}</footer></article>`).join('');
+  } catch { renderEmpty(element, 'تعذر تحميل الشهادات حالياً.'); }
+}
+
+async function loadFaqs() {
+  const element = document.querySelector('#faqs-grid');
+  if (!element) return;
+  try {
+    const data = await readPublicTable('faqs', 'id,question_ar,answer_ar,category', 'sort_order.asc');
+    if (!data?.length) return renderEmpty(element, 'لا توجد أسئلة منشورة حالياً.');
+    element.innerHTML = data.map(item => `<details class="faq-item"><summary>${escapeHtml(item.question_ar)}</summary><p>${escapeHtml(item.answer_ar)}</p></details>`).join('');
+  } catch { renderEmpty(element, 'تعذر تحميل الأسئلة حالياً.'); }
+}
+
+async function loadPages() {
+  const element = document.querySelector('#pages-grid');
+  if (!element) return;
+  try {
+    const data = await readPublicTable('pages', 'id,slug,title_ar,hero_title_ar,hero_text_ar,template,hero:media_assets!pages_hero_media_id_fkey(public_url,kind,alt_ar)', 'navigation_order.asc');
+    const customPages = (data || []).filter(page => !['home', 'about', 'services', 'portfolio', 'achievements', 'clients', 'contact'].includes(page.slug));
+    if (!customPages.length) { element.closest('.pages-section').hidden = true; return; }
+    element.innerHTML = customPages.map(page => `<article class="page-card">${page.hero?.kind === 'image' ? `<img src="${escapeHtml(resolveMediaUrl(page.hero.public_url))}" alt="${escapeHtml(page.hero.alt_ar || page.title_ar)}" loading="lazy" />` : ''}<div><span>${escapeHtml(page.template || 'صفحة')}</span><h3>${escapeHtml(page.hero_title_ar || page.title_ar)}</h3><p>${escapeHtml(page.hero_text_ar || '')}</p></div></article>`).join('');
+  } catch { element.closest('.pages-section').hidden = true; }
+}
+
 function setStatus(id, message, isError = false) {
   const element = document.querySelector(id);
   element.textContent = message;
@@ -246,7 +302,7 @@ document.querySelector('#contact-form').addEventListener('submit', async event =
 async function initializePage() {
   document.querySelector('#year').textContent = new Date().getFullYear();
   initializeClientCarousel();
-  await Promise.all([loadServices(), loadProjects(), loadClients()]);
+  await Promise.all([loadServices(), loadProjects(), loadClients(), loadAchievements(), loadPartners(), loadTestimonials(), loadFaqs(), loadPages()]);
 }
 
 window.addEventListener('hashchange', openProjectFromLocation);
