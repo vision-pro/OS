@@ -15,26 +15,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="./styles.css?v=project-presentation-2" />
-    <script>
-      (function () {
-        function recoverStyles(attempt) {
-        var link = document.querySelector('link[href*="styles.css"]');
-        if (!link || (link.sheet && link.sheet.cssRules && link.sheet.cssRules.length > 0)) return;
-        fetch(link.href, { cache: 'no-store' }).then(function (response) { return response.text(); }).then(function (css) {
-          if (css.length < 16000 && attempt < 4) { setTimeout(function () { recoverStyles(attempt + 1); }, 1200); return; }
-          if (css.length < 16000) return;
-          var existing = document.querySelector('style[data-css-recovery]');
-          if (existing) existing.remove();
-          var style = document.createElement('style');
-          style.setAttribute('data-css-recovery', 'true');
-          style.textContent = css;
-          document.head.appendChild(style);
-        }).catch(function () {});
-        }
-        setTimeout(function () { recoverStyles(0); }, 4200);
-      })();
-    </script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/vision-pro/OS@f9e327c86ef4d590ad3f5ba35bb3540f8013d6bd/github-pages/styles.css" />
   </head>
   <body>
     <header class="topbar"><a class="brand" href="#top" aria-label="رؤية للإنتاج الفني"><img src="https://visionportf-gwxs956w.manus.space/manus-storage/logo-lockup-color_f107c237.svg" alt="VISION Production" /></a><nav aria-label="التنقل الرئيسي"><a href="#about">من نحن</a><a href="#services">خدماتنا</a><a href="#work">الأعمال</a><a href="#achievements">الإنجازات</a><a href="#clients">العملاء</a><a href="#contact">تواصل معنا</a></nav><a class="nav-cta" href="#booking">احجز مشروعك</a></header>
