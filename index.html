@@ -12,19 +12,20 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/vision-pro/OS@main/github-pages/styles.css?v=project-presentation-2" />
     <script>
       (function () {
-        var attempts = 0;
         function recoverStyles() {
         var link = document.querySelector('link[href*="styles.css"]');
         if (!link || (link.sheet && link.sheet.cssRules && link.sheet.cssRules.length > 0)) return;
         fetch(link.href, { cache: 'no-store' }).then(function (response) { return response.text(); }).then(function (css) {
-          if (css.length < 16000 && attempts < 4) { attempts += 1; setTimeout(recoverStyles, 900); return; }
+          if (css.length < 16000) return;
+          var existing = document.querySelector('style[data-css-recovery]');
+          if (existing) existing.remove();
           var style = document.createElement('style');
           style.setAttribute('data-css-recovery', 'true');
           style.textContent = css;
           document.head.appendChild(style);
         }).catch(function () {});
         }
-        setTimeout(recoverStyles, 900);
+        setTimeout(recoverStyles, 4200);
       })();
     </script>
   </head>
