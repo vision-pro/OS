@@ -26,21 +26,16 @@ class UploadRequestMock {
 afterEach(() => vi.unstubAllGlobals());
 
 describe("uploadMediaFile", () => {
-  it("uploads binary media directly after presigning and reports upload progress", async () => {
+  it("sends binary media through the authenticated upload route and reports upload progress", async () => {
     vi.stubGlobal("XMLHttpRequest", UploadRequestMock);
-    const fetchMock = vi.fn()
-      .mockResolvedValueOnce({ ok: true, json: async () => ({ uploadUrl: "https://storage.example/upload", key: "vision-production/media/file.mp4", url: "/manus-storage/vision-production/media/file.mp4" }) })
-      .mockResolvedValueOnce({ ok: true, json: async () => ({ id: 30001 }) });
-    vi.stubGlobal("fetch", fetchMock);
     const progress: number[] = [];
     const file = { name: "vision-upload-verification.mp4", type: "video/mp4", size: 2_848_208 } as File;
 
     await expect(uploadMediaFile(file, { onProgress: value => progress.push(value) })).resolves.toEqual({ id: 30001 });
 
-    expect(fetchMock).toHaveBeenNthCalledWith(1, "/api/media/presign", expect.objectContaining({ method: "POST", credentials: "include" }));
-    expect(UploadRequestMock.latest?.open).toHaveBeenCalledWith("PUT", "https://storage.example/upload");
+    expect(UploadRequestMock.latest?.open).toHaveBeenCalledWith("POST", expect.stringContaining("fileName=vision-upload-verification.mp4"));
+    expect(UploadRequestMock.latest?.withCredentials).toBe(true);
     expect(UploadRequestMock.latest?.setRequestHeader).toHaveBeenCalledWith("Content-Type", "video/mp4");
-    expect(fetchMock).toHaveBeenNthCalledWith(2, "/api/media/finalize", expect.objectContaining({ method: "POST", credentials: "include" }));
     expect(progress).toEqual([50, 100]);
   });
 });
