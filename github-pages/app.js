@@ -18,6 +18,7 @@ function buildWhatsAppUrl(phone, fields) { const message = [`مرحباً رؤي
 function getServiceIconMarkup(iconName) { return serviceIcons[iconName] || serviceIcons.Clapperboard; }
 function getClientLogoFallback(index, assetBaseUrl) { return clientLogoFiles[index] ? `${assetBaseUrl}/manus-storage/${clientLogoFiles[index]}` : null; }
 function getCarouselScrollAmount(containerWidth, direction) { return Math.max(280, Math.round(containerWidth * 0.78)) * (direction < 0 ? -1 : 1); }
+function resolveMediaUrl(url) { return url && /^https?:\/\//i.test(url) ? url : url ? `${siteConfig.assetBaseUrl}${url}` : null; }
 
 const apiHeaders = {
   apikey: siteConfig.supabasePublishableKey,
@@ -83,10 +84,11 @@ async function loadProjects() {
   if (!data?.length) return renderEmpty(element, 'لا توجد مشاريع منشورة حالياً. أضف مشاريعك من لوحة الإدارة لتظهر هنا تلقائياً.');
   element.innerHTML = data.map((project, index) => {
     const media = project.media_assets;
-    const mediaMarkup = media?.public_url
+    const mediaUrl = resolveMediaUrl(media?.public_url);
+    const mediaMarkup = mediaUrl
       ? media.kind === 'video'
-        ? `<video muted playsinline preload="metadata" aria-label="${escapeHtml(media.alt_ar || project.title_ar)}"><source src="${escapeHtml(media.public_url)}" /></video>`
-        : `<img src="${escapeHtml(media.public_url)}" alt="${escapeHtml(media.alt_ar || project.title_ar)}" loading="lazy" />`
+        ? `<video controls playsinline preload="metadata" aria-label="${escapeHtml(media.alt_ar || project.title_ar)}"><source src="${escapeHtml(mediaUrl)}" type="video/mp4" /></video><span class="project-play" aria-hidden="true">▶</span>`
+        : `<img src="${escapeHtml(mediaUrl)}" alt="${escapeHtml(media.alt_ar || project.title_ar)}" loading="lazy" />`
       : `<span class="project-placeholder">VISION / ${String(index + 1).padStart(2, '0')}</span>`;
     return `<article class="project-card"><div class="project-visual">${mediaMarkup}<span class="project-label">VISION</span></div><div class="project-meta"><span>${escapeHtml(project.client_name || 'VISION PRODUCTION')}</span><span>${escapeHtml(project.project_date || '2026')}</span></div><h3>${escapeHtml(project.title_ar)}</h3><p>${escapeHtml(project.summary_ar || '')}</p></article>`;
   }).join('');
