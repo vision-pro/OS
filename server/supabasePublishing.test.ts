@@ -18,6 +18,16 @@ describe("Supabase publication payloads", () => {
     expect(result).toMatchObject({ table: "projects", conflict: "slug", payload: { slug: "car-advertisement", cover_media_id: "media-7", poster_media_id: "media-8", display_location: "carousel", media_ids: ["media-7", "media-8"], status: "published" } });
   });
 
+  it("routes every remaining publication state to its public Supabase table", async () => {
+    const dependencies = { resolveMediaId: async () => null, resolveCategoryId: async () => null };
+    await expect(toSupabasePayload("categories", { slug: "category-check", isActive: true }, dependencies)).resolves.toMatchObject({ table: "portfolio_categories", payload: { is_active: true } });
+    await expect(toSupabasePayload("achievements", { isPublished: true }, dependencies)).resolves.toMatchObject({ table: "achievements", payload: { is_published: true } });
+    await expect(toSupabasePayload("clients", { isActive: true }, dependencies)).resolves.toMatchObject({ table: "clients", payload: { is_active: true } });
+    await expect(toSupabasePayload("partners", { isActive: true }, dependencies)).resolves.toMatchObject({ table: "partners", payload: { is_active: true } });
+    await expect(toSupabasePayload("testimonials", { isPublished: true }, dependencies)).resolves.toMatchObject({ table: "testimonials", payload: { is_published: true } });
+    await expect(toSupabasePayload("faqs", { isPublished: true }, dependencies)).resolves.toMatchObject({ table: "faqs", payload: { is_published: true } });
+    await expect(toSupabasePayload("pages", { slug: "page-check", status: "published" }, dependencies)).resolves.toMatchObject({ table: "pages", payload: { status: "published" } });
+  });
   it("exports the external-media deactivation contract for deleted local media", () => {
     expect(deactivateSupabaseMedia).toBeTypeOf("function");
   });
