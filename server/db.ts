@@ -318,7 +318,7 @@ export async function getPublicSiteData() {
     db.select().from(instagramVideos).where(eq(instagramVideos.status, "published")).orderBy(desc(instagramVideos.sourcePublishedAt)),
   ]);
   const mediaIds = [
-    ...projectRows.flatMap(project => [project.coverMediaId, ...(project.mediaIds ?? [])]),
+    ...projectRows.flatMap(project => [project.coverMediaId, project.posterMediaId, ...(project.mediaIds ?? [])]),
     ...serviceRows.map(item => item.coverMediaId),
     ...achievementRows.map(item => item.mediaId),
     ...clientRows.map(item => item.logoMediaId),
@@ -329,7 +329,7 @@ export async function getPublicSiteData() {
   return {
     pages: pageRows,
     services: serviceRows,
-    projects: projectRows.map(project => ({ ...project, media: selectMediaByIds([project.coverMediaId, ...(project.mediaIds ?? [])].filter((id): id is number => typeof id === "number"), media) })),
+    projects: projectRows.map(project => ({ ...project, media: selectMediaByIds([project.coverMediaId, project.posterMediaId, ...(project.mediaIds ?? [])].filter((id): id is number => typeof id === "number"), media) })),
     categories: categoryRows,
     achievements: achievementRows.map(item => ({ ...item, media: selectMediaByIds(item.mediaId ? [item.mediaId] : [], media)[0] ?? null })),
     clients: clientRows.map(item => ({ ...item, logo: selectMediaByIds(item.logoMediaId ? [item.logoMediaId] : [], media)[0] ?? null })),

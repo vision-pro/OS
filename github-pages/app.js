@@ -1,3 +1,5 @@
+import { isProjectVisibleInLocation, projectQuery, slugFromProjectHash } from './projectPresentation.js';
+
 const siteConfig = {
   supabaseUrl: 'https://hpzrsuygkbkbxfihgbyu.supabase.co',
   supabasePublishableKey: 'sb_publishable_LoSeKtJFyS_gwOpaAz3tgw_EgQui17d',
@@ -19,6 +21,7 @@ function getServiceIconMarkup(iconName) { return serviceIcons[iconName] || servi
 function getClientLogoFallback(index, assetBaseUrl) { return clientLogoFiles[index] ? `${assetBaseUrl}/manus-storage/${clientLogoFiles[index]}` : null; }
 function getCarouselScrollAmount(containerWidth, direction) { return Math.max(280, Math.round(containerWidth * 0.78)) * (direction < 0 ? -1 : 1); }
 function resolveMediaUrl(url) { return url && /^https?:\/\//i.test(url) ? url : url ? `${siteConfig.assetBaseUrl}${url}` : null; }
+let loadedProjects = [];
 
 const apiHeaders = {
   apikey: siteConfig.supabasePublishableKey,
@@ -73,25 +76,91 @@ async function loadServices() {
   `).join('');
 }
 
+function projectVideoMarkup(mediaUrl, posterUrl, label) {
+  const poster = posterUrl ? ` poster="${escapeHtml(posterUrl)}"` : '';
+  return `<div class="project-video-shell"><video controls playsinline preload="metadata"${poster} aria-label="${escapeHtml(label)}"><source src="${escapeHtml(mediaUrl)}" type="video/mp4" /></video><span class="project-play" aria-hidden="true">▶</span><div class="project-video-fallback" aria-live="polite"><b>تعذرت معاينة الفيديو حالياً</b><span>جرّب التحديث أو افتح المشروع لاحقاً.</span></div></div>`;
+}
+
+function projectCardMarkup(project, index, location) {
+  const media = project.cover_media;
+  const mediaUrl = resolveMediaUrl(media?.public_url);
+  const posterUrl = project.poster_media?.kind === 'image' ? resolveMediaUrl(project.poster_media.public_url) : null;
+  const mediaMarkup = mediaUrl ? media.kind === 'video' ? projectVideoMarkup(mediaUrl, posterUrl, media.alt_ar || project.title_ar) : `<img src="${escapeHtml(mediaUrl)}" alt="${escapeHtml(media.alt_ar || project.title_ar)}" loading="lazy" />` : `<span class="project-placeholder">VISION / ${String(index + 1).padStart(2, '0')}</span>`;
+  const category = project.portfolio_categories?.title_ar || 'أعمال رؤية';
+  const href = projectQuery(project.slug);
+  return `<article class="project-card" data-category="${escapeHtml(project.portfolio_categories?.slug || 'all')}"><div class="project-visual">${mediaMarkup}<span class="project-label">${escapeHtml(category)}</span></div><div class="project-meta"><span>${escapeHtml(project.client_name || 'VISION PRODUCTION')}</span><span>${escapeHtml(project.project_date || '2026')}</span></div><h3>${escapeHtml(project.title_ar)}</h3><p>${escapeHtml(project.summary_ar || '')}</p><a class="project-open" href="${escapeHtml(href)}" data-project-link="${escapeHtml(project.slug)}">عرض المشروع <span>←</span></a></article>`;
+}
+
+function initializeProjectMedia() {
+  document.querySelectorAll('.project-video-shell video').forEach(video => {
+    const shell = video.closest('.project-video-shell');
+    video.addEventListener('error', () => shell?.classList.add('media-unavailable'));
+    video.addEventListener('loadeddata', () => shell?.classList.remove('media-unavailable'));
+    window.setTimeout(() => { if (video.readyState === 0 && video.networkState === HTMLMediaElement.NETWORK_NO_SOURCE) shell?.classList.add('media-unavailable'); }, 3500);
+    video.load();
+  });
+}
+
+function initializeProjectCarousel() {
+  const track = document.querySelector('#projects-carousel-track');
+  const controls = document.querySelector('#projects-carousel-controls');
+  if (!track || !controls) return;
+  const cards = [...track.querySelectorAll('.project-card')];
+  if (cards.length < 2) { controls.hidden = true; return; }
+  controls.querySelectorAll('[data-project-scroll]').forEach(button => button.addEventListener('click', () => track.scrollBy({ left: getCarouselScrollAmount(track.clientWidth, Number(button.dataset.projectScroll)), behavior: 'smooth' })));
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  let interval = window.setInterval(() => {
+    const maxScroll = track.scrollWidth - track.clientWidth;
+    track.scrollBy({ left: track.scrollLeft >= maxScroll - 8 ? -maxScroll : getCarouselScrollAmount(track.clientWidth, 1), behavior: 'smooth' });
+  }, 5500);
+  const pause = () => { window.clearInterval(interval); };
+  track.addEventListener('pointerenter', pause, { once: true });
+  track.addEventListener('focusin', pause, { once: true });
+}
+
+function initializeProjectFilters() {
+  document.querySelectorAll('[data-project-filter]').forEach(button => button.addEventListener('click', () => {
+    const filter = button.dataset.projectFilter;
+    document.querySelectorAll('[data-project-filter]').forEach(item => item.classList.toggle('active', item === button));
+    document.querySelectorAll('#projects-grid-list .project-card').forEach(card => { card.hidden = filter !== 'all' && card.dataset.category !== filter; });
+  }));
+}
+
+function showProjectDetail(slug) {
+  const project = loadedProjects.find(item => item.slug === slug);
+  if (!project) return;
+  const dialog = document.querySelector('#project-detail-dialog') || document.body.appendChild(Object.assign(document.createElement('dialog'), { id: 'project-detail-dialog', className: 'project-detail-dialog' }));
+  const media = project.cover_media;
+  const mediaUrl = resolveMediaUrl(media?.public_url);
+  const posterUrl = project.poster_media?.kind === 'image' ? resolveMediaUrl(project.poster_media.public_url) : null;
+  const mediaMarkup = mediaUrl ? media?.kind === 'video' ? projectVideoMarkup(mediaUrl, posterUrl, media.alt_ar || project.title_ar) : `<img src="${escapeHtml(mediaUrl)}" alt="${escapeHtml(media?.alt_ar || project.title_ar)}" />` : `<div class="project-detail-empty">لا توجد وسائط مرفقة بهذا المشروع.</div>`;
+  dialog.innerHTML = `<button type="button" class="project-detail-close" aria-label="إغلاق">×</button><div class="project-detail-media">${mediaMarkup}</div><div class="project-detail-copy"><p class="project-detail-kicker">${escapeHtml(project.portfolio_categories?.title_ar || 'أعمال رؤية')}</p><h2>${escapeHtml(project.title_ar)}</h2><p>${escapeHtml(project.description_ar || project.summary_ar || 'تفاصيل المشروع ستُضاف من لوحة الإدارة.')}</p><dl><div><dt>العميل</dt><dd>${escapeHtml(project.client_name || 'رؤية للإنتاج الفني')}</dd></div><div><dt>التاريخ</dt><dd>${escapeHtml(project.project_date || '—')}</dd></div></dl></div>`;
+  dialog.querySelector('.project-detail-close').addEventListener('click', () => { dialog.close(); history.replaceState(null, '', '#work'); });
+  dialog.addEventListener('close', () => { if (new URLSearchParams(location.search).get('project') || slugFromProjectHash(location.hash)) history.replaceState(null, '', '#work'); }, { once: true });
+  dialog.showModal();
+  initializeProjectMedia();
+}
+
+function openProjectFromLocation() { const slug = new URLSearchParams(location.search).get('project') || slugFromProjectHash(location.hash); if (slug) showProjectDetail(slug); }
+
 async function loadProjects() {
   const element = document.querySelector('#projects-grid');
   let data;
   try {
-    data = await readPublicTable('projects', 'id,title_ar,summary_ar,client_name,project_date,media_assets(public_url,kind,alt_ar)', 'published_at.desc');
+    data = await readPublicTable('projects', 'id,slug,title_ar,summary_ar,description_ar,client_name,project_date,display_location,is_featured,portfolio_categories(title_ar,slug),cover_media:media_assets!projects_cover_media_id_fkey(public_url,kind,alt_ar),poster_media:media_assets!projects_poster_media_id_fkey(public_url,kind,alt_ar)', 'published_at.desc');
   } catch {
     return renderEmpty(element, 'تعذر تحميل الأعمال حالياً.');
   }
   if (!data?.length) return renderEmpty(element, 'لا توجد مشاريع منشورة حالياً. أضف مشاريعك من لوحة الإدارة لتظهر هنا تلقائياً.');
-  element.innerHTML = data.map((project, index) => {
-    const media = project.media_assets;
-    const mediaUrl = resolveMediaUrl(media?.public_url);
-    const mediaMarkup = mediaUrl
-      ? media.kind === 'video'
-        ? `<video controls playsinline preload="metadata" aria-label="${escapeHtml(media.alt_ar || project.title_ar)}"><source src="${escapeHtml(mediaUrl)}" type="video/mp4" /></video><span class="project-play" aria-hidden="true">▶</span>`
-        : `<img src="${escapeHtml(mediaUrl)}" alt="${escapeHtml(media.alt_ar || project.title_ar)}" loading="lazy" />`
-      : `<span class="project-placeholder">VISION / ${String(index + 1).padStart(2, '0')}</span>`;
-    return `<article class="project-card"><div class="project-visual">${mediaMarkup}<span class="project-label">VISION</span></div><div class="project-meta"><span>${escapeHtml(project.client_name || 'VISION PRODUCTION')}</span><span>${escapeHtml(project.project_date || '2026')}</span></div><h3>${escapeHtml(project.title_ar)}</h3><p>${escapeHtml(project.summary_ar || '')}</p></article>`;
-  }).join('');
+  loadedProjects = data;
+  const categories = [...new Map(data.filter(project => project.portfolio_categories?.slug).map(project => [project.portfolio_categories.slug, project.portfolio_categories])).values()];
+  const carouselProjects = data.filter(project => isProjectVisibleInLocation(project, 'carousel'));
+  const gridProjects = data.filter(project => isProjectVisibleInLocation(project, 'grid'));
+  element.innerHTML = `${carouselProjects.length ? `<section class="projects-carousel" aria-roledescription="carousel" aria-label="أعمال مختارة"><div class="projects-carousel-head"><div><p>عرض مختار</p><h3>سلايد شو الأعمال</h3></div><div id="projects-carousel-controls" class="projects-carousel-controls"><button type="button" data-project-scroll="-1" aria-label="العمل السابق">→</button><button type="button" data-project-scroll="1" aria-label="العمل التالي">←</button></div></div><div id="projects-carousel-track" class="projects-carousel-track">${carouselProjects.map((project, index) => projectCardMarkup(project, index, 'carousel')).join('')}</div></section>` : ''}<section class="projects-library"><div class="project-filter-row" role="group" aria-label="تصفية الأعمال"><button class="active" type="button" data-project-filter="all">كل الأعمال</button>${categories.map(category => `<button type="button" data-project-filter="${escapeHtml(category.slug)}">${escapeHtml(category.title_ar)}</button>`).join('')}</div><div id="projects-grid-list" class="project-grid">${gridProjects.map((project, index) => projectCardMarkup(project, index, 'grid')).join('')}</div></section>`;
+  initializeProjectCarousel();
+  initializeProjectFilters();
+  initializeProjectMedia();
+  openProjectFromLocation();
 }
 
 async function loadClients() {
@@ -171,4 +240,6 @@ async function initializePage() {
   await Promise.all([loadServices(), loadProjects(), loadClients()]);
 }
 
+window.addEventListener('hashchange', openProjectFromLocation);
+window.addEventListener('popstate', openProjectFromLocation);
 void initializePage();

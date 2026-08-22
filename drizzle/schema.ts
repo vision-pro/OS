@@ -73,6 +73,7 @@ export const projects = mysqlTable(
     clientName: varchar("clientName", { length: 250 }),
     projectDate: varchar("projectDate", { length: 50 }),
     coverMediaId: int("coverMediaId"),
+    posterMediaId: int("posterMediaId"),
     mediaIds: json("mediaIds").$type<number[]>(),
     contentAr: json("contentAr").$type<Record<string, unknown>>(),
     contentEn: json("contentEn").$type<Record<string, unknown>>(),
@@ -83,6 +84,7 @@ export const projects = mysqlTable(
     seoKeywords: varchar("seoKeywords", { length: 500 }),
     status: mysqlEnum("status", ["draft", "published", "archived"]).default("draft").notNull(),
     isFeatured: boolean("isFeatured").default(false).notNull(),
+    displayLocation: mysqlEnum("displayLocation", ["grid", "carousel", "both"]).default("both").notNull(),
     publishedAt: timestamp("publishedAt"),
     createdAt: timestamp("createdAt").defaultNow().notNull(),
     updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
@@ -91,6 +93,7 @@ export const projects = mysqlTable(
     index("project_category_idx").on(table.categoryId),
     index("project_featured_idx").on(table.isFeatured, table.status),
     index("project_cover_idx").on(table.coverMediaId),
+    index("project_poster_idx").on(table.posterMediaId),
   ],
 );
 

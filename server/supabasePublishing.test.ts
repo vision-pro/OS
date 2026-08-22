@@ -13,6 +13,11 @@ describe("Supabase publication payloads", () => {
     expect((result as any).payload).not.toHaveProperty("id");
   });
 
+  it("maps project poster and display location to the public schema", async () => {
+    const result = await toSupabasePayload("projects", { slug: "car-advertisement", titleAr: "إعلان سيارة", titleEn: "Car advertisement", coverMediaId: 7, posterMediaId: 8, displayLocation: "carousel", status: "published", mediaIds: [7, 8] }, { resolveMediaId: async id => id ? `media-${id}` : null, resolveCategoryId: async () => null });
+    expect(result).toMatchObject({ table: "projects", conflict: "slug", payload: { slug: "car-advertisement", cover_media_id: "media-7", poster_media_id: "media-8", display_location: "carousel", media_ids: ["media-7", "media-8"], status: "published" } });
+  });
+
   it("exports the external-media deactivation contract for deleted local media", () => {
     expect(deactivateSupabaseMedia).toBeTypeOf("function");
   });
