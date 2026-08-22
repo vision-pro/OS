@@ -11,7 +11,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/vision-pro/OS@main/github-pages/styles.css?v=project-presentation-2" />
     <script>
-      window.addEventListener('load', function () {
+      (function () {
+        function recoverStyles() {
         var link = document.querySelector('link[href*="styles.css"]');
         if (!link || (link.sheet && link.sheet.cssRules && link.sheet.cssRules.length > 0)) return;
         fetch(link.href, { cache: 'no-store' }).then(function (response) { return response.text(); }).then(function (css) {
@@ -20,7 +21,9 @@
           style.textContent = css;
           document.head.appendChild(style);
         }).catch(function () {});
-      });
+        }
+        setTimeout(recoverStyles, 700);
+      })();
     </script>
   </head>
   <body>
