@@ -52,15 +52,25 @@ export const adminRouter = router({
       )
       .mutation(async ({ input }) => {
         const result = await saveAdminEntity(input.entity as AdminEntity, input.id, input.values);
-        await syncAdminEntityToSupabase(input.entity as AdminEntity, result.id);
-        return result;
+        try {
+          await syncAdminEntityToSupabase(input.entity as AdminEntity, result.id);
+          return { ...result, syncWarning: null };
+        } catch (error) {
+          console.error("[Admin Content] Saved locally but public sync failed", error);
+          return { ...result, syncWarning: "تم حفظ التعديل، لكن مزامنة الواجهة العامة ستُعاد تلقائياً عند النشر التالي." };
+        }
       }),
     setPublication: adminProcedure
       .input(z.object({ entity: entitySchema, id: z.number().int().positive(), published: z.boolean() }))
       .mutation(async ({ input }) => {
         const result = await setAdminEntityPublication(input.entity as AdminEntity, input.id, input.published);
-        await syncAdminEntityToSupabase(input.entity as AdminEntity, input.id);
-        return result;
+        try {
+          await syncAdminEntityToSupabase(input.entity as AdminEntity, input.id);
+          return { ...result, syncWarning: null };
+        } catch (error) {
+          console.error("[Admin Content] Publication updated locally but public sync failed", error);
+          return { ...result, syncWarning: "تم تحديث حالة النشر، لكن مزامنة الواجهة العامة ستُعاد تلقائياً عند النشر التالي." };
+        }
       }),
     remove: adminProcedure
       .input(z.object({ entity: entitySchema, id: z.number().int().positive() }))

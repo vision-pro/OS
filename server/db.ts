@@ -22,6 +22,7 @@ import {
 import { ENV } from "./_core/env";
 import { publicationUpdate } from "./content-publishing";
 import { deactivateSupabaseMedia, syncEntityToSupabase, syncSupabaseMedia } from "./supabasePublishing";
+import { normalizeAdminContentValues } from "./adminContentNormalization";
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
@@ -396,7 +397,7 @@ export async function saveAdminEntity(entity: AdminEntity, id: number | undefine
   const db = await getDb();
   if (!db) throw new Error("قاعدة البيانات غير متاحة حالياً");
   const table = adminEntityMap[entity] as any;
-  const cleanValues = Object.fromEntries(Object.entries(values).filter(([key]) => key !== "id" && key !== "createdAt" && key !== "updatedAt"));
+  const cleanValues = normalizeAdminContentValues(entity, values);
   if (id) {
     await db.update(table).set(cleanValues).where(eq(table.id, id));
     return { id };
