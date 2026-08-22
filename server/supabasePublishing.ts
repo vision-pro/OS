@@ -49,6 +49,14 @@ export async function syncSupabaseMedia(row: Record<string, any>) {
   return rows?.[0]?.id as string | undefined;
 }
 
+export async function deactivateSupabaseMedia(storageKey: string) {
+  await rest(`media_assets?storage_key=eq.${encodeURIComponent(storageKey)}`, {
+    method: "PATCH",
+    headers: { Prefer: "return=minimal" },
+    body: JSON.stringify({ is_public: false }),
+  });
+}
+
 export async function syncEntityToSupabase(entity: SupabaseEntity, row: Record<string, any>, dependencies: SyncDependencies) {
   const detail = await toSupabasePayload(entity, row, dependencies);
   if (detail.conflict) {

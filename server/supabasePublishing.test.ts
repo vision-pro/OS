@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { toSupabasePayload } from "./supabasePublishing";
+import { deactivateSupabaseMedia, toSupabasePayload } from "./supabasePublishing";
 
 describe("Supabase publication payloads", () => {
   it("maps a published service to the external schema and resolves its cover media", async () => {
@@ -11,5 +11,9 @@ describe("Supabase publication payloads", () => {
     const result = await toSupabasePayload("clients", { id: 19, nameAr: "رؤية", nameEn: "Vision", logoMediaId: 5, isActive: false, sortOrder: 1 }, { resolveMediaId: async () => "logo-uuid", resolveCategoryId: async () => null });
     expect(result).toMatchObject({ table: "clients", match: { name_ar: "رؤية" }, payload: { name_ar: "رؤية", logo_media_id: "logo-uuid", is_active: false } });
     expect((result as any).payload).not.toHaveProperty("id");
+  });
+
+  it("exports the external-media deactivation contract for deleted local media", () => {
+    expect(deactivateSupabaseMedia).toBeTypeOf("function");
   });
 });

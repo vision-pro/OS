@@ -21,7 +21,7 @@ import {
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 import { publicationUpdate } from "./content-publishing";
-import { syncEntityToSupabase, syncSupabaseMedia } from "./supabasePublishing";
+import { deactivateSupabaseMedia, syncEntityToSupabase, syncSupabaseMedia } from "./supabasePublishing";
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
@@ -475,7 +475,8 @@ export async function saveMediaAsset(values: typeof mediaAssets.$inferInsert) {
 export async function deleteMediaAsset(id: number) {
   const db = await getDb();
   if (!db) throw new Error("قاعدة البيانات غير متاحة حالياً");
-  const [projectRows, serviceRows, achievementRows, clientRows, partnerRows, testimonialRows, pageRows] = await Promise.all([
+  const [mediaRows, projectRows, serviceRows, achievementRows, clientRows, partnerRows, testimonialRows, pageRows] = await Promise.all([
+    db.select().from(mediaAssets).where(eq(mediaAssets.id, id)).limit(1),
     db.select({ id: projects.id, coverMediaId: projects.coverMediaId, mediaIds: projects.mediaIds }).from(projects),
     db.select({ id: services.id, coverMediaId: services.coverMediaId }).from(services),
     db.select({ id: achievements.id, mediaId: achievements.mediaId }).from(achievements),
@@ -484,6 +485,8 @@ export async function deleteMediaAsset(id: number) {
     db.select({ id: testimonials.id, avatarMediaId: testimonials.avatarMediaId }).from(testimonials),
     db.select({ id: pages.id, heroMediaId: pages.heroMediaId }).from(pages),
   ]);
+  const media = mediaRows[0];
+  if (!media) throw new Error("الوسيط غير موجود أو حُذف بالفعل.");
   const references = [
     ...projectRows.filter(row => row.coverMediaId === id || row.mediaIds?.includes(id)).map(row => `مشروع #${row.id}`),
     ...serviceRows.filter(row => row.coverMediaId === id).map(row => `خدمة #${row.id}`),
@@ -495,6 +498,7 @@ export async function deleteMediaAsset(id: number) {
   ];
   if (references.length) throw new Error(`لا يمكن حذف الوسائط لأنها مرتبطة بـ ${references.slice(0, 3).join("، ")}. أزل الرابط أولاً.`);
   await db.delete(mediaAssets).where(eq(mediaAssets.id, id));
+  await deactivateSupabaseMedia(media.storageKey).catch(error => console.warn("[Media Delete] Supabase deactivation failed", error));
   return { id };
 }
 

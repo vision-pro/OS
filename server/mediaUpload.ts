@@ -55,6 +55,7 @@ export function registerMediaUploadRoute(app: Express) {
         const fileName = typeof req.query.fileName === "string" ? req.query.fileName : "";
         const mimeType = typeof req.query.mimeType === "string" ? req.query.mimeType : req.headers["content-type"] || "application/octet-stream";
         const buffer = Buffer.isBuffer(req.body) ? req.body : Buffer.alloc(0);
+        console.info("[Media Upload] Received", { fileName, mimeType, sizeBytes: buffer.length, userId: user.id });
         const { valid, validType, maxBytes } = validateMediaUpload(mimeType, buffer.length);
         if (!validType) {
           return res.status(415).json({ error: "صيغة الملف غير مدعومة. الصيغ المسموحة: MP4 وWebM وMOV وJPG وPNG وWebP وSVG وPDF." });
@@ -76,9 +77,10 @@ export function registerMediaUploadRoute(app: Express) {
           altEn: null,
           createdById: user.id,
         });
+        console.info("[Media Upload] Stored", { id: stored.id, sizeBytes: buffer.length, mimeType });
         return res.status(201).json({ ...stored, url, storageKey: key, originalName: fileName, mimeType, sizeBytes: buffer.length });
       } catch (error) {
-        console.error("[Media Upload] Failed:", error);
+        console.error("[Media Upload] Failed", { message: error instanceof Error ? error.message : String(error) });
         return res.status(500).json({ error: "تعذر رفع الملف الآن. حاول مرة أخرى." });
       }
     },

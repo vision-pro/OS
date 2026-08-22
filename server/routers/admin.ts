@@ -50,7 +50,11 @@ export const adminRouter = router({
           values: z.record(z.string(), z.unknown()),
         }),
       )
-      .mutation(({ input }) => saveAdminEntity(input.entity as AdminEntity, input.id, input.values)),
+      .mutation(async ({ input }) => {
+        const result = await saveAdminEntity(input.entity as AdminEntity, input.id, input.values);
+        await syncAdminEntityToSupabase(input.entity as AdminEntity, result.id);
+        return result;
+      }),
     setPublication: adminProcedure
       .input(z.object({ entity: entitySchema, id: z.number().int().positive(), published: z.boolean() }))
       .mutation(async ({ input }) => {
