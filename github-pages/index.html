@@ -18,17 +18,19 @@
     <link rel="stylesheet" href="./styles.css?v=project-presentation-2" />
     <script>
       (function () {
+        var attempts = 0;
         function recoverStyles() {
         var link = document.querySelector('link[href*="styles.css"]');
         if (!link || (link.sheet && link.sheet.cssRules && link.sheet.cssRules.length > 0)) return;
         fetch(link.href, { cache: 'no-store' }).then(function (response) { return response.text(); }).then(function (css) {
+          if (css.length < 16000 && attempts < 4) { attempts += 1; setTimeout(recoverStyles, 900); return; }
           var style = document.createElement('style');
           style.setAttribute('data-css-recovery', 'true');
           style.textContent = css;
           document.head.appendChild(style);
         }).catch(function () {});
         }
-        setTimeout(recoverStyles, 700);
+        setTimeout(recoverStyles, 900);
       })();
     </script>
   </head>
