@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { uploadMediaFile } from "./mediaUpload";
+import { CHUNKED_UPLOAD_THRESHOLD_BYTES, uploadMediaFile, shouldUseChunkedUpload } from "./mediaUpload";
 
 class UploadRequestMock {
   static latest: UploadRequestMock | null = null;
@@ -26,6 +26,11 @@ class UploadRequestMock {
 afterEach(() => vi.unstubAllGlobals());
 
 describe("uploadMediaFile", () => {
+  it("routes videos larger than the gateway-safe threshold to chunked upload", () => {
+    expect(shouldUseChunkedUpload({ size: CHUNKED_UPLOAD_THRESHOLD_BYTES + 1 } as File)).toBe(true);
+    expect(shouldUseChunkedUpload({ size: CHUNKED_UPLOAD_THRESHOLD_BYTES } as File)).toBe(false);
+  });
+
   it("sends binary media through the authenticated upload route and reports upload progress", async () => {
     vi.stubGlobal("XMLHttpRequest", UploadRequestMock);
     const progress: number[] = [];
