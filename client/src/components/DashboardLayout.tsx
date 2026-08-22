@@ -78,6 +78,7 @@ export default function DashboardLayout({
 
   return (
     <SidebarProvider
+      className="vision-admin-layout"
       style={
         {
           "--sidebar-width": `${sidebarWidth}px`,
@@ -147,9 +148,14 @@ function DashboardLayoutContent({
 
   return (
     <>
-      <div className="relative" ref={sidebarRef}>
-        <Sidebar
-          collapsible="icon"
+      <div
+        className="relative shrink-0"
+        ref={sidebarRef}
+        style={{ width: isCollapsed ? "var(--sidebar-width-icon)" : "var(--sidebar-width)" }}
+      >
+          <Sidebar
+            side="right"
+            collapsible="icon"
           className="border-r-0 vision-admin-sidebar"
           disableTransition={isResizing}
         >

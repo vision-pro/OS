@@ -3,6 +3,12 @@
 @font-face { font-family: "Aquire"; src: url("/manus-storage/Aquire_29f9be66.otf") format("opentype"); font-display: swap; font-weight: 400; }
 @font-face { font-family: "Aquire"; src: url("/manus-storage/AquireBold_5787f1df.otf") format("opentype"); font-display: swap; font-weight: 700; }
 
+@media (min-width: 768px) {
+  .vision-admin-layout { display: grid !important; grid-template-columns: var(--sidebar-width) minmax(0, 1fr); }
+  .vision-admin-layout:has([data-slot="sidebar"][data-state="collapsed"]) { grid-template-columns: var(--sidebar-width-icon) minmax(0, 1fr); }
+  .vision-admin-layout > [data-slot="sidebar-inset"] { width: auto !important; min-width: 0; }
+}
+
 :root { --orange: #f37420; --orange-dark: #df6315; --teal: #2b7771; --teal-dark: #1a4d49; --ink: #1a1a1a; --ink-2: #262626; --white: #fff; --paper: #f7f7f6; --gray: #6e6e6e; --line: #e2e2e2; --container: 1200px; --ease: cubic-bezier(.2,0,0,1); }
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; }
