@@ -31,9 +31,18 @@ const apiHeaders = {
 
 async function readPublicTable(table, select, order) {
   const params = new URLSearchParams({ select, order });
-  const response = await fetch(`${siteConfig.supabaseUrl}/rest/v1/${table}?${params}`, { headers: apiHeaders });
-  if (!response.ok) throw new Error(`Unable to read ${table}`);
-  return response.json();
+  let lastError;
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      const response = await fetch(`${siteConfig.supabaseUrl}/rest/v1/${table}?${params}`, { headers: apiHeaders });
+      if (!response.ok) throw new Error(`Unable to read ${table}`);
+      return response.json();
+    } catch (error) {
+      lastError = error;
+      if (attempt < 2) await new Promise(resolve => window.setTimeout(resolve, 450 * (attempt + 1)));
+    }
+  }
+  throw lastError;
 }
 
 async function insertPublicRecord(table, values) {
