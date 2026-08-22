@@ -239,7 +239,9 @@ async function loadPages() {
   try {
     const data = await readPublicTable('pages', 'id,slug,title_ar,hero_title_ar,hero_text_ar,template,hero:media_assets!pages_hero_media_id_fkey(public_url,kind,alt_ar)', 'navigation_order.asc');
     const customPages = (data || []).filter(page => !['home', 'about', 'services', 'portfolio', 'achievements', 'clients', 'contact'].includes(page.slug));
-    if (!customPages.length) { element.closest('.pages-section').hidden = true; return; }
+    const section = element.closest('.pages-section');
+    if (!customPages.length) { section.hidden = true; return; }
+    section.hidden = false;
     element.innerHTML = customPages.map(page => `<article class="page-card">${page.hero?.kind === 'image' ? `<img src="${escapeHtml(resolveMediaUrl(page.hero.public_url))}" alt="${escapeHtml(page.hero.alt_ar || page.title_ar)}" loading="lazy" />` : ''}<div><span>${escapeHtml(page.template || 'صفحة')}</span><h3>${escapeHtml(page.hero_title_ar || page.title_ar)}</h3><p>${escapeHtml(page.hero_text_ar || '')}</p></div></article>`).join('');
   } catch { element.closest('.pages-section').hidden = true; }
 }
