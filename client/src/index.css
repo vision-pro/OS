@@ -9,6 +9,13 @@
   .vision-admin-layout > [data-slot="sidebar-inset"] { width: auto !important; min-width: 0; }
 }
 
+@media (max-width: 767px) {
+  .vision-admin-layout { display: block !important; }
+  .vision-admin-layout > .relative { display: none !important; }
+  .vision-admin-layout > [data-slot="sidebar-inset"] { width: 100% !important; min-width: 0; }
+  .vision-admin-shell .admin-page { width: 100%; min-width: 0; }
+}
+
 :root { --orange: #f37420; --orange-dark: #df6315; --teal: #2b7771; --teal-dark: #1a4d49; --ink: #1a1a1a; --ink-2: #262626; --white: #fff; --paper: #f7f7f6; --gray: #6e6e6e; --line: #e2e2e2; --container: 1200px; --ease: cubic-bezier(.2,0,0,1); }
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; }
